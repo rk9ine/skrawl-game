@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     minHeight: 180,
   },
   playerListContainer: {
-    width: 165, // Fixed width to match PlayerList component
-    marginRight: 8,
+    width: 125, // Reduced from 165px to 125px
+    marginRight: 0, // Removed margin to eliminate gap between PlayerList and ChatSection
   },
   chatSectionContainer: {
     flex: 1, // Takes remaining space

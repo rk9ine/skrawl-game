@@ -42,6 +42,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {
           backgroundColor: theme.surface,
           borderColor: theme.border,
+          borderRadius: borderRadius.md,
           ...applyThemeShadow('sm')
         }
       ]}
@@ -88,14 +89,15 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 12, // Reduced horizontal padding
     paddingVertical: 6, // Reduced vertical padding
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    marginVertical: 6, // Add margin to create space between components
+    overflow: 'hidden', // Ensures content doesn't overflow rounded corners
   },
   topPosition: {
-    borderTopWidth: 0,
+    marginTop: 0, // No margin at top when positioned at top
   },
   bottomPosition: {
-    borderBottomWidth: 0,
+    marginBottom: 0, // No margin at bottom when positioned at bottom
   },
   inputContainer: {
     flexDirection: 'row',

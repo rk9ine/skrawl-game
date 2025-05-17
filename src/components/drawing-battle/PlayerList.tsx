@@ -8,10 +8,10 @@ import { PlayerListPosition } from '../../store/layoutStore';
 
 // Mock player data for placeholder
 const mockPlayers = [
-  { id: '1', name: 'Player 1', score: 120, isDrawing: true, isReady: true },
-  { id: '2', name: 'Player 2', score: 85, isDrawing: false, isReady: true },
-  { id: '3', name: 'Player 3', score: 65, isDrawing: false, isReady: true },
-  { id: '4', name: 'Player 4', score: 40, isDrawing: false, isReady: false },
+  { id: '1', name: 'Player 1', score: 120, isDrawing: true, isReady: true, avatar: '🎨' },
+  { id: '2', name: 'Player 2', score: 85, isDrawing: false, isReady: true, avatar: '😀' },
+  { id: '3', name: 'Player 3', score: 65, isDrawing: false, isReady: true, avatar: '🎮' },
+  { id: '4', name: 'Player 4', score: 40, isDrawing: false, isReady: false, avatar: '👤' },
 ];
 
 interface PlayerListProps {
@@ -30,6 +30,7 @@ interface PlayerListProps {
     score: number;
     isDrawing: boolean;
     isReady: boolean;
+    avatar?: string; // Emoji avatar for the player
   }>;
 }
 
@@ -52,45 +53,57 @@ const PlayerList: React.FC<PlayerListProps> = ({
         }
       ]}
     >
-      {/* Player status icon */}
-      <View
-        style={[
-          styles.statusIcon,
-          {
-            backgroundColor: item.isReady
-              ? theme.success + '20'
-              : theme.warning + '20'
-          }
-        ]}
-      >
-        <Ionicons
-          name={item.isDrawing ? "brush" : (item.isReady ? "checkmark" : "time")}
-          size={14}
-          color={item.isDrawing ? theme.primary : (item.isReady ? theme.success : theme.warning)}
-        />
+      <View style={styles.playerItemTopRow}>
+        {/* Player avatar */}
+        <Text
+          style={styles.playerAvatar}
+          size={typography.fontSizes.lg}
+        >
+          {item.avatar || '👤'}
+        </Text>
+
+        {/* Player name */}
+        <Text
+          variant="body"
+          size={typography.fontSizes.sm}
+          color={item.isDrawing ? theme.primary : theme.text}
+          bold={item.isDrawing}
+          style={styles.playerName}
+          numberOfLines={2}
+        >
+          {item.name}
+        </Text>
+
+        {/* Player status icon */}
+        <View
+          style={[
+            styles.statusIcon,
+            {
+              backgroundColor: item.isReady
+                ? theme.success + '20'
+                : theme.warning + '20'
+            }
+          ]}
+        >
+          <Ionicons
+            name={item.isDrawing ? "brush" : (item.isReady ? "checkmark" : "time")}
+            size={14}
+            color={item.isDrawing ? theme.primary : (item.isReady ? theme.success : theme.warning)}
+          />
+        </View>
       </View>
 
-      {/* Player name */}
-      <Text
-        variant="body"
-        size={typography.fontSizes.sm}
-        color={item.isDrawing ? theme.primary : theme.text}
-        bold={item.isDrawing}
-        style={styles.playerName}
-        numberOfLines={1}
-      >
-        {item.name}
-      </Text>
-
-      {/* Player score */}
-      <Text
-        variant="body"
-        size={typography.fontSizes.sm}
-        color={theme.textSecondary}
-        style={styles.playerScore}
-      >
-        {item.score}
-      </Text>
+      {/* Player score row */}
+      <View style={styles.playerItemBottomRow}>
+        <Text
+          variant="body"
+          size={typography.fontSizes.xs}
+          color={theme.textSecondary}
+          style={styles.playerScore}
+        >
+          Score: {item.score}
+        </Text>
+      </View>
     </View>
   );
 
@@ -136,7 +149,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   leftPosition: {
-    marginRight: 8,
+    marginRight: 0, // Removed margin to eliminate gap with ChatSection
   },
   rightPosition: {
     marginLeft: 8,
@@ -149,25 +162,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'column',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
   },
+  playerItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  playerItemBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 28, // Align with the text after avatar
+  },
+  playerAvatar: {
+    marginRight: 4,
+    width: 24,
+    textAlign: 'center',
+  },
   statusIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginLeft: 4,
   },
   playerName: {
     flex: 1,
+    flexWrap: 'wrap',
   },
   playerScore: {
-    marginLeft: 4,
+    marginLeft: 0,
   },
 });
 
