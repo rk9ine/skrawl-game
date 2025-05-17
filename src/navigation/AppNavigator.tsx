@@ -1,0 +1,66 @@
+import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuthStore } from '../store';
+import { RootStackParamList, MainStackParamList } from '../types/navigation';
+
+// Auth Screens
+import LoginScreen from '../screens/auth/LoginScreen';
+import AuthPromptScreen from '../screens/auth/AuthPromptScreen';
+
+// Main Screens
+import DashboardScreen from '../screens/main/DashboardScreen';
+import WhiteboardScreen from '../screens/main/WhiteboardScreen';
+import DrawingBattleScreen from '../screens/main/DrawingBattleScreen';
+import PrivateMatchScreen from '../screens/main/PrivateMatchScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
+
+// Loading Screen
+import LoadingScreen from '../screens/LoadingScreen';
+
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const MainStack = createNativeStackNavigator<MainStackParamList>();
+
+const AppNavigator = () => {
+  const { isLoading, checkSession, user, isSkipped } = useAuthStore();
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {!user && !isSkipped ? (
+          <RootStack.Group>
+            <RootStack.Screen name="Auth" component={LoginScreen} />
+          </RootStack.Group>
+        ) : (
+          <RootStack.Group>
+            <RootStack.Screen name="Main" component={MainNavigator} />
+            <RootStack.Screen name="AuthPrompt" component={AuthPromptScreen} />
+          </RootStack.Group>
+        )}
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+// Main Navigator (after authentication or skipping)
+const MainNavigator = () => {
+  return (
+    <MainStack.Navigator screenOptions={{ headerShown: false }}>
+      <MainStack.Screen name="Dashboard" component={DashboardScreen} />
+      <MainStack.Screen name="Whiteboard" component={WhiteboardScreen} />
+      <MainStack.Screen name="DrawingBattle" component={DrawingBattleScreen} />
+      <MainStack.Screen name="PrivateMatch" component={PrivateMatchScreen} />
+      <MainStack.Screen name="Settings" component={SettingsScreen} />
+    </MainStack.Navigator>
+  );
+};
+
+export default AppNavigator;
