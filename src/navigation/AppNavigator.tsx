@@ -14,6 +14,7 @@ import WhiteboardScreen from '../screens/main/WhiteboardScreen';
 import DrawingBattleScreen from '../screens/main/DrawingBattleScreen';
 import PrivateMatchScreen from '../screens/main/PrivateMatchScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
+import SkiaCanvasTestScreen from '../screens/main/SkiaCanvasTestScreen';
 
 // Loading Screen
 import LoadingScreen from '../screens/LoadingScreen';
@@ -59,6 +60,7 @@ const MainNavigator = () => {
       <MainStack.Screen name="DrawingBattle" component={DrawingBattleScreen} />
       <MainStack.Screen name="PrivateMatch" component={PrivateMatchScreen} />
       <MainStack.Screen name="Settings" component={SettingsScreen} />
+      <MainStack.Screen name="SkiaCanvasTest" component={SkiaCanvasTestScreen} />
     </MainStack.Navigator>
   );
 };

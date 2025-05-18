@@ -8,6 +8,7 @@ export type MainStackParamList = {
   DrawingBattle: undefined;
   PrivateMatch: { matchId?: string };
   Settings: undefined;
+  SkiaCanvasTest: undefined;
 };
 
 export type RootStackParamList = {

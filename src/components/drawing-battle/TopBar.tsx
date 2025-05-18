@@ -27,6 +27,31 @@ interface TopBarProps {
   timeRemaining?: number;
 
   /**
+   * Whether the user is currently drawing
+   */
+  isDrawing?: boolean;
+
+  /**
+   * Callback to toggle drawing mode
+   */
+  onToggleDrawing?: () => void;
+
+  /**
+   * Callback to undo the last drawing action
+   */
+  onUndo?: () => void;
+
+  /**
+   * Callback to redo the last undone drawing action
+   */
+  onRedo?: () => void;
+
+  /**
+   * Callback to clear the canvas
+   */
+  onClear?: () => void;
+
+  /**
    * Callback when settings button is pressed
    */
   onOpenSettings?: () => void;
@@ -40,6 +65,11 @@ const TopBar: React.FC<TopBarProps> = ({
   totalRounds = 5,
   word = 'house',
   timeRemaining = 60,
+  isDrawing = false,
+  onToggleDrawing,
+  onUndo,
+  onRedo,
+  onClear,
   onOpenSettings,
 }) => {
   const { theme: themeContext, typography, spacing, borderRadius } = useTheme();
@@ -137,11 +167,31 @@ const TopBar: React.FC<TopBarProps> = ({
         </Text>
       </View>
 
-      {/* Right section - Settings button */}
+      {/* Right section - Drawing toggle and Settings buttons */}
       <View style={styles.rightSection}>
+        {/* Drawing toggle button */}
         <TouchableOpacity
           style={[
-            styles.settingsButton,
+            styles.actionButton,
+            {
+              backgroundColor: isDrawing ? themeContext.primary : themeContext.backgroundAlt,
+              borderRadius: borderRadius.round,
+              marginRight: 8,
+            }
+          ]}
+          onPress={onToggleDrawing}
+        >
+          <Ionicons
+            name={isDrawing ? "brush" : "brush-outline"}
+            size={20}
+            color={isDrawing ? themeContext.buttonTextLight : themeContext.text}
+          />
+        </TouchableOpacity>
+
+        {/* Settings button */}
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
             {
               backgroundColor: themeContext.backgroundAlt,
               borderRadius: borderRadius.round,
@@ -190,6 +240,12 @@ const styles = StyleSheet.create({
     minWidth: 70,
   },
   settingsButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButton: {
     width: 36,
     height: 36,
     justifyContent: 'center',

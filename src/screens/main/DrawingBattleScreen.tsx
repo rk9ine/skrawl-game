@@ -10,8 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
+import { useDrawingStore } from '../../store/drawingStore';
 import {
   CanvasPlaceholder,
+  SkiaCanvas,
   DrawingToolbar,
   PlayerList,
   ChatSection,
@@ -24,6 +26,14 @@ const DrawingBattleScreen = () => {
   const { theme, spacing } = useTheme();
   const navigation = useNavigation();
   const { chatInputPosition } = useLayoutStore();
+
+  // Get drawing store functions
+  const {
+    setColor,
+    setStrokeWidth,
+    clearCanvas,
+    undoLastPath
+  } = useDrawingStore();
 
   // Fixed player list position (always on the left)
   const playerListPosition = 'left';
@@ -90,6 +100,11 @@ const DrawingBattleScreen = () => {
     }
   };
 
+  // Toggle drawing mode
+  const toggleDrawingMode = () => {
+    setIsDrawing(prev => !prev);
+  };
+
   // Handle exit game
   const onExit = () => {
     navigation.goBack();
@@ -106,18 +121,32 @@ const DrawingBattleScreen = () => {
         totalRounds={5}
         word={currentWord}
         timeRemaining={timeRemaining}
+        isDrawing={isDrawing}
+        onToggleDrawing={toggleDrawingMode}
+        onUndo={undoLastPath}
+        onClear={clearCanvas}
         onOpenSettings={() => setIsSettingsModalVisible(true)}
       />
 
       {/* Main Content */}
       <View style={styles.content}>
-        {/* Canvas Placeholder */}
+        {/* Skia Canvas */}
         <View style={styles.canvasContainer}>
-          <CanvasPlaceholder isDrawing={isDrawing} />
+          {isDrawing ? (
+            <SkiaCanvas isDrawing={isDrawing} />
+          ) : (
+            <CanvasPlaceholder isDrawing={isDrawing} />
+          )}
         </View>
 
         {/* Drawing Toolbar - consistent height and styling */}
-        <DrawingToolbar isDrawing={isDrawing} />
+        <DrawingToolbar
+          isDrawing={isDrawing}
+          onSelectColor={setColor}
+          onChangeBrushSize={setStrokeWidth}
+          onUndo={undoLastPath}
+          onClear={clearCanvas}
+        />
 
         {/* Message Input - conditionally positioned at top */}
         {chatInputPosition === 'top' && (

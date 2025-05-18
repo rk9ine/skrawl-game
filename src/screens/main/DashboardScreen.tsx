@@ -85,6 +85,10 @@ const DashboardScreen = () => {
     navigation.navigate('Settings');
   };
 
+  const handleNavigateToSkiaCanvasTest = () => {
+    navigation.navigate('SkiaCanvasTest');
+  };
+
   return (
     <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
       <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
@@ -193,6 +197,30 @@ const DashboardScreen = () => {
               style={{ marginLeft: spacing.sm }}
             >
               Private Match
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              {
+                backgroundColor: theme.success,
+                padding: spacing.md,
+                borderRadius: borderRadius.lg,
+                marginBottom: spacing.md,
+                ...applyThemeShadow('md')
+              }
+            ]}
+            onPress={handleNavigateToSkiaCanvasTest}
+          >
+            <Ionicons name="code-working" size={24} color="#FFFFFF" />
+            <Text
+              variant="body"
+              size={typography.fontSizes.lg}
+              color="#FFFFFF"
+              style={{ marginLeft: spacing.sm }}
+            >
+              Skia Canvas Test
             </Text>
           </TouchableOpacity>
         </View>
