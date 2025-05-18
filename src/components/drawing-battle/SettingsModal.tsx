@@ -47,6 +47,77 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     resetLayoutPreferences
   } = useLayoutStore();
 
+  // Create styles with theme values
+  const styles = StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg, // Using theme spacing.lg (24) instead of hardcoded value
+    },
+    modalContainer: {
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '80%',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.md, // Using theme spacing.md (16) instead of hardcoded value
+      borderBottomWidth: 1,
+    },
+    closeButton: {
+      width: spacing.md * 2.5, // Using theme spacing.md (16) * 2.5 = 40 instead of hardcoded value
+      height: spacing.md * 2.5, // Using theme spacing.md (16) * 2.5 = 40 instead of hardcoded value
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    content: {
+      padding: spacing.md, // Using theme spacing.md (16) instead of hardcoded value
+    },
+    section: {
+      marginBottom: spacing.lg, // Using theme spacing.lg (24) instead of hardcoded value
+    },
+    settingItem: {
+      marginBottom: spacing.md, // Using theme spacing.md (16) instead of hardcoded value
+    },
+    optionsContainer: {
+      flexDirection: 'row',
+      marginTop: spacing.xs, // Using theme spacing.xs (8) instead of hardcoded value
+    },
+    optionButton: {
+      flex: 1,
+      height: spacing.md * 2.5, // Using theme spacing.md (16) * 2.5 = 40 instead of hardcoded value
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border, // Using theme color instead of hardcoded '#DDDDDD'
+      marginHorizontal: spacing.xxs, // Using theme spacing.xxs (4) instead of hardcoded value
+      borderRadius: borderRadius.md, // Using theme borderRadius.md (8) instead of hardcoded value
+    },
+    resetButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.sm, // Using theme spacing.sm (12) instead of hardcoded value
+      borderWidth: 1,
+      borderRadius: borderRadius.md, // Using theme borderRadius.md (8) instead of hardcoded value
+      marginTop: spacing.xs, // Using theme spacing.xs (8) instead of hardcoded value
+    },
+    footer: {
+      padding: spacing.md, // Using theme spacing.md (16) instead of hardcoded value
+      borderTopWidth: 1,
+    },
+    exitButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.sm, // Using theme spacing.sm (12) instead of hardcoded value
+      borderRadius: borderRadius.md, // Using theme borderRadius.md (8) instead of hardcoded value
+    },
+  });
+
   const handleChatInputPositionChange = (position: ChatInputPosition) => {
     setChatInputPosition(position);
   };
@@ -207,75 +278,5 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  settingItem: {
-    marginBottom: 16,
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    marginTop: 8,
-  },
-  optionButton: {
-    flex: 1,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
-    marginHorizontal: 4,
-    borderRadius: 8,
-  },
-  resetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-  },
-  exitButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-});
 
 export default SettingsModal;

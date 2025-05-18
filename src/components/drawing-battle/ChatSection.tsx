@@ -43,6 +43,40 @@ const ChatSection: React.FC<ChatSectionProps> = ({
 }) => {
   const { theme, typography, spacing, borderRadius } = useTheme();
 
+  // Create styles with theme values - skribbl.io inspired (minimal spacing)
+  const styles = StyleSheet.create({
+    container: {
+      width: '100%', // Use full width of parent container
+      height: '100%', // Use full height of parent container
+      borderWidth: 1,
+      overflow: 'hidden',
+      borderRadius: 0, // No border radius for edge-to-edge design
+    },
+    leftPosition: {
+      marginRight: 0, // No margin for edge-to-edge design
+    },
+    rightPosition: {
+      marginLeft: 0, // No margin for edge-to-edge design
+    },
+    header: {
+      paddingHorizontal: spacing.xs, // Consistent padding
+      paddingVertical: spacing.xxs, // Reduced vertical padding
+      borderBottomWidth: 1,
+      alignItems: 'center',
+      height: 28, // Fixed height for consistent header size with PlayerList
+    },
+    messageItem: {
+      paddingHorizontal: spacing.xs, // Increased padding
+      paddingVertical: spacing.xs / 2, // Increased padding
+    },
+    messageSender: {
+      marginBottom: spacing.xxs / 2, // Using theme spacing.xxs (4) / 2 instead of hardcoded 2
+    },
+    messageText: {
+      flexWrap: 'wrap',
+    },
+  });
+
   const renderMessageItem = ({ item }: { item: typeof messages[0] }) => (
     <View
       style={[
@@ -82,16 +116,16 @@ const ChatSection: React.FC<ChatSectionProps> = ({
         position === 'right' ? styles.leftPosition : styles.rightPosition,
         {
           backgroundColor: theme.surface,
-          borderRadius: borderRadius.md,
+          borderRadius: 0, // No border radius for edge-to-edge design
           borderColor: theme.border,
-          ...applyThemeShadow('sm')
+          // No shadow for skribbl.io-like flat design
         }
       ]}
     >
       <View style={[styles.header, { borderBottomColor: theme.divider }]}>
         <Text
-          variant="subtitle"
-          size={typography.fontSizes.sm}
+          variant="heading" // Uses Patrick Hand font
+          size={typography.fontSizes.md} // Consistent font size with PlayerList
           color={theme.textSecondary}
         >
           CHAT
@@ -109,36 +143,5 @@ const ChatSection: React.FC<ChatSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%', // Use full width of parent container
-    height: '100%', // Use full height of parent container
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  leftPosition: {
-    marginRight: 0, // Removed margin to align perfectly with the right edge
-  },
-  rightPosition: {
-    marginLeft: 8,
-  },
-  header: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  messageItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  messageSender: {
-    marginBottom: 2,
-  },
-  messageText: {
-    flexWrap: 'wrap',
-  },
-});
 
 export default ChatSection;

@@ -24,8 +24,45 @@ const MessageInput: React.FC<MessageInputProps> = ({
   position,
   onSendMessage,
 }) => {
-  const { theme, spacing, borderRadius } = useTheme();
+  const { theme, spacing, borderRadius, typography } = useTheme();
   const [message, setMessage] = useState('');
+
+  // Create styles with theme values - skribbl.io inspired (minimal spacing)
+  const styles = StyleSheet.create({
+    container: {
+      width: '100%',
+      paddingHorizontal: 0, // No horizontal padding
+      paddingVertical: 0, // No vertical padding
+      borderWidth: 1,
+      marginVertical: 0, // No vertical margin
+      overflow: 'hidden', // Ensures content doesn't overflow
+    },
+    topPosition: {
+      marginTop: 0, // No margin at top when positioned at top
+    },
+    bottomPosition: {
+      marginBottom: 0, // No margin at bottom when positioned at bottom
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxs, // Minimal horizontal padding
+      paddingVertical: Platform.OS === 'ios' ? spacing.xxs / 2 : 0, // Minimal vertical padding
+    },
+    input: {
+      flex: 1,
+      height: Platform.OS === 'ios' ? spacing.md + spacing.xxs : spacing.md + spacing.xxs, // Reduced height
+      paddingVertical: 0,
+      fontSize: typography.fontSizes.sm, // Using theme typography
+    },
+    sendButton: {
+      width: spacing.md + spacing.xxs, // Reduced size
+      height: spacing.md + spacing.xxs, // Reduced size
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: spacing.xxs, // Minimal margin
+    },
+  });
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -42,8 +79,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {
           backgroundColor: theme.surface,
           borderColor: theme.border,
-          borderRadius: borderRadius.md,
-          ...applyThemeShadow('sm')
+          borderRadius: 0, // No border radius for edge-to-edge design
+          // No shadow for skribbl.io-like flat design
         }
       ]}
     >
@@ -52,7 +89,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           styles.inputContainer,
           {
             backgroundColor: theme.backgroundAlt,
-            borderRadius: borderRadius.md,
+            borderRadius: borderRadius.xs, // Minimal border radius
           }
         ]}
       >
@@ -83,41 +120,5 @@ const MessageInput: React.FC<MessageInputProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    paddingHorizontal: 12, // Reduced horizontal padding
-    paddingVertical: 6, // Reduced vertical padding
-    borderWidth: 1,
-    marginVertical: 6, // Add margin to create space between components
-    overflow: 'hidden', // Ensures content doesn't overflow rounded corners
-  },
-  topPosition: {
-    marginTop: 0, // No margin at top when positioned at top
-  },
-  bottomPosition: {
-    marginBottom: 0, // No margin at bottom when positioned at bottom
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 6 : 3, // Reduced padding
-  },
-  input: {
-    flex: 1,
-    height: Platform.OS === 'ios' ? 32 : 36, // Reduced height
-    paddingVertical: 0,
-    fontSize: 14,
-  },
-  sendButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-});
 
 export default MessageInput;

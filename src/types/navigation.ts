@@ -9,6 +9,7 @@ export type MainStackParamList = {
   PrivateMatch: { matchId?: string };
   Settings: undefined;
   SkiaCanvasTest: undefined;
+  AvatarSelection: undefined;
 };
 
 export type RootStackParamList = {

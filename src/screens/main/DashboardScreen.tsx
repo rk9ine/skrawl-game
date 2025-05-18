@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -47,37 +48,49 @@ const DashboardScreen = () => {
       alignItems: 'center',
     },
     welcomeText: {},
-    buttonContainer: {
+    sectionTitle: {
       width: '100%',
-      alignItems: 'center',
+      marginBottom: 16,
     },
-    button: {
+    cardsContainer: {
+      width: '100%',
       flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    card: {
+      width: '48%',
+      marginBottom: 16,
+      overflow: 'hidden',
+    },
+    cardContent: {
+      alignItems: 'center',
+      padding: 16,
+    },
+    cardIcon: {
+      marginBottom: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      width: '80%',
     },
-    buttonText: {},
+    cardTitle: {
+      textAlign: 'center',
+      marginBottom: 4,
+    },
+    cardDescription: {
+      textAlign: 'center',
+    },
   });
 
-  // Simple navigation handlers
+  // Navigation handlers
   const handleNavigateToWhiteboard = () => {
     navigation.navigate('Whiteboard');
   };
 
-  const handleNavigateToMultiplayerBattle = () => {
+  const handleNavigateToClassicGame = () => {
     if (isSkipped) {
       navigation.navigate('AuthPrompt', { redirectTo: 'DrawingBattle' });
     } else {
       navigation.navigate('DrawingBattle');
-    }
-  };
-
-  const handleNavigateToPrivateMatch = () => {
-    if (isSkipped) {
-      navigation.navigate('AuthPrompt', { redirectTo: 'PrivateMatch' });
-    } else {
-      navigation.navigate('PrivateMatch', {});
     }
   };
 
@@ -122,106 +135,122 @@ const DashboardScreen = () => {
             color={theme.textSecondary}
             style={{ marginBottom: spacing.xxs }}
           >
-            {isSkipped ? 'Welcome, Guest' : `Welcome, ${user?.email?.split('@')[0] || 'Artist'}`}
+            {isSkipped ? 'Welcome back, Player! (Not Signed In)' : `Welcome back, ${user?.email?.split('@')[0] || 'Player'}!`}
           </Text>
         </View>
 
-        {/* Simple placeholder navigation buttons */}
-        <View style={styles.buttonContainer}>
+        {/* Play a Game section */}
+        <View style={styles.sectionTitle}>
+          <Text
+            variant="heading"
+            size={typography.fontSizes.xl}
+          >
+            Play a Game
+          </Text>
+        </View>
+
+        {/* Game mode cards */}
+        <View style={styles.cardsContainer}>
+          {/* Classic Game Card */}
           <TouchableOpacity
             style={[
-              styles.button,
+              styles.card,
               {
-                backgroundColor: theme.primary,
-                padding: spacing.md,
+                backgroundColor: theme.surface,
                 borderRadius: borderRadius.lg,
-                marginBottom: spacing.md,
+                ...applyThemeShadow('md')
+              }
+            ]}
+            onPress={handleNavigateToClassicGame}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.cardIcon}>
+                <Text style={{ fontSize: 40 }}>🎨</Text>
+              </View>
+              <Text
+                variant="heading"
+                size={typography.fontSizes.lg}
+                style={styles.cardTitle}
+              >
+                Classic
+              </Text>
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color={theme.textSecondary}
+                style={styles.cardDescription}
+              >
+                Take turns drawing a word
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Whiteboard Card */}
+          <TouchableOpacity
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.surface,
+                borderRadius: borderRadius.lg,
                 ...applyThemeShadow('md')
               }
             ]}
             onPress={handleNavigateToWhiteboard}
           >
-            <Ionicons name="brush" size={24} color="#FFFFFF" />
-            <Text
-              variant="body"
-              size={typography.fontSizes.lg}
-              color="#FFFFFF"
-              style={{ marginLeft: spacing.sm }}
-            >
-              Whiteboard
-            </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardIcon}>
+                <Text style={{ fontSize: 40 }}>📝</Text>
+              </View>
+              <Text
+                variant="heading"
+                size={typography.fontSizes.lg}
+                style={styles.cardTitle}
+              >
+                WhiteBoard
+              </Text>
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color={theme.textSecondary}
+                style={styles.cardDescription}
+              >
+                Free drawing canvas
+              </Text>
+            </View>
           </TouchableOpacity>
 
+          {/* Skia Canvas Test Card */}
           <TouchableOpacity
             style={[
-              styles.button,
+              styles.card,
               {
-                backgroundColor: theme.secondary,
-                padding: spacing.md,
+                backgroundColor: theme.surface,
                 borderRadius: borderRadius.lg,
-                marginBottom: spacing.md,
-                ...applyThemeShadow('md')
-              }
-            ]}
-            onPress={handleNavigateToMultiplayerBattle}
-          >
-            <Ionicons name="people" size={24} color="#FFFFFF" />
-            <Text
-              variant="body"
-              size={typography.fontSizes.lg}
-              color="#FFFFFF"
-              style={{ marginLeft: spacing.sm }}
-            >
-              Drawing Battle
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              {
-                backgroundColor: theme.info,
-                padding: spacing.md,
-                borderRadius: borderRadius.lg,
-                marginBottom: spacing.md,
-                ...applyThemeShadow('md')
-              }
-            ]}
-            onPress={handleNavigateToPrivateMatch}
-          >
-            <Ionicons name="game-controller" size={24} color="#FFFFFF" />
-            <Text
-              variant="body"
-              size={typography.fontSizes.lg}
-              color="#FFFFFF"
-              style={{ marginLeft: spacing.sm }}
-            >
-              Private Match
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.button,
-              {
-                backgroundColor: theme.success,
-                padding: spacing.md,
-                borderRadius: borderRadius.lg,
-                marginBottom: spacing.md,
                 ...applyThemeShadow('md')
               }
             ]}
             onPress={handleNavigateToSkiaCanvasTest}
           >
-            <Ionicons name="code-working" size={24} color="#FFFFFF" />
-            <Text
-              variant="body"
-              size={typography.fontSizes.lg}
-              color="#FFFFFF"
-              style={{ marginLeft: spacing.sm }}
-            >
-              Skia Canvas Test
-            </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardIcon}>
+                <Text style={{ fontSize: 40 }}>🧪</Text>
+              </View>
+              <Text
+                variant="heading"
+                size={typography.fontSizes.lg}
+                style={styles.cardTitle}
+              >
+                Skia Canvas Test
+              </Text>
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color={theme.textSecondary}
+                style={styles.cardDescription}
+              >
+                Test new canvas features
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
       </ScrollView>

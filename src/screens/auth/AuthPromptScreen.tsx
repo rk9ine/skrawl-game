@@ -3,13 +3,13 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList } from '../../types/navigation';
+import { RootStackParamList, MainStackParamList } from '../../types/navigation';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/authStore';
 import { Text, SafeAreaContainer } from '../../components/ui';
 
 type AuthPromptScreenRouteProp = RouteProp<RootStackParamList, 'AuthPrompt'>;
-type AuthPromptScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type AuthPromptScreenNavigationProp = NativeStackNavigationProp<RootStackParamList & MainStackParamList>;
 
 const AuthPromptScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows } = useTheme();
@@ -115,6 +115,14 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
+  },
+  continueButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   cancelButton: {
     width: '100%',

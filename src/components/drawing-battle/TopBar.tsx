@@ -27,31 +27,6 @@ interface TopBarProps {
   timeRemaining?: number;
 
   /**
-   * Whether the user is currently drawing
-   */
-  isDrawing?: boolean;
-
-  /**
-   * Callback to toggle drawing mode
-   */
-  onToggleDrawing?: () => void;
-
-  /**
-   * Callback to undo the last drawing action
-   */
-  onUndo?: () => void;
-
-  /**
-   * Callback to redo the last undone drawing action
-   */
-  onRedo?: () => void;
-
-  /**
-   * Callback to clear the canvas
-   */
-  onClear?: () => void;
-
-  /**
    * Callback when settings button is pressed
    */
   onOpenSettings?: () => void;
@@ -65,14 +40,74 @@ const TopBar: React.FC<TopBarProps> = ({
   totalRounds = 5,
   word = 'house',
   timeRemaining = 60,
-  isDrawing = false,
-  onToggleDrawing,
-  onUndo,
-  onRedo,
-  onClear,
   onOpenSettings,
 }) => {
   const { theme: themeContext, typography, spacing, borderRadius } = useTheme();
+
+  // Create styles with theme values - skribbl.io inspired (minimal spacing)
+  const styles = StyleSheet.create({
+    container: {
+      width: '100%',
+      height: Platform.OS === 'ios' ? spacing.xl + spacing.sm : spacing.xl + spacing.sm, // Increased height to prevent cutoff
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xxs, // Minimal horizontal padding
+      paddingVertical: spacing.xxs, // Minimal vertical padding to prevent overflow
+      borderBottomWidth: 1,
+    },
+    leftSection: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    middleSection: {
+      flex: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rightSection: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    timerContainer: {
+      paddingHorizontal: spacing.xxs, // Minimal horizontal padding
+      paddingVertical: spacing.xxs / 2, // Slightly increased padding
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 54, // Compact width
+      height: spacing.md + 2, // Slightly increased height to prevent text cutoff
+      marginBottom: 2, // Added margin to prevent cutoff
+    },
+    settingsButton: {
+      width: spacing.md + spacing.xs, // Reduced size
+      height: spacing.md + spacing.xs, // Reduced size
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionButton: {
+      width: 32, // Reduced size
+      height: 32, // Reduced size
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    roundText: {
+      marginBottom: 2, // Reduced margin
+    },
+    timerText: {
+      fontWeight: 'bold',
+    },
+    wordContainer: {
+      alignItems: 'center',
+    },
+    wordLabel: {
+      marginBottom: 2, // Reduced margin
+    },
+    wordPlaceholder: {
+      letterSpacing: 2,
+    },
+  });
 
   // Format time remaining as MM:SS
   const formatTimeRemaining = () => {
@@ -94,7 +129,7 @@ const TopBar: React.FC<TopBarProps> = ({
         {
           backgroundColor: themeContext.surface,
           borderBottomColor: themeContext.border,
-          ...applyThemeShadow('sm')
+          // No shadow for skribbl.io-like flat design
         }
       ]}
     >
@@ -116,9 +151,8 @@ const TopBar: React.FC<TopBarProps> = ({
           ]}
         >
           <Text
-            variant="body"
-            size={typography.fontSizes.md}
-            bold
+            variant="heading" // Changed to heading variant to use Patrick Hand font
+            size={typography.fontSizes.md} // Increased font size for better readability
             color={
               timeRemaining > 30
                 ? themeContext.success
@@ -126,6 +160,7 @@ const TopBar: React.FC<TopBarProps> = ({
                   ? themeContext.warning
                   : themeContext.error
             }
+            style={{ lineHeight: spacing.md }} // Added line height to prevent cutoff
           >
             {formatTimeRemaining()}
           </Text>
@@ -133,11 +168,10 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Round indicator */}
         <Text
-          variant="body"
-          size={typography.fontSizes.sm}
-          bold
+          variant="heading" // Changed to heading variant to use Patrick Hand font
+          size={typography.fontSizes.sm} // Increased font size for better readability
           color={themeContext.text}
-          style={{ marginTop: 4, textAlign: 'center' }}
+          style={{ marginTop: 2, textAlign: 'center', marginBottom: 2 }} // Adjusted margins
         >
           Round {round}/{totalRounds}
         </Text>
@@ -147,7 +181,7 @@ const TopBar: React.FC<TopBarProps> = ({
       <View style={styles.middleSection}>
         {/* Guess label */}
         <Text
-          variant="body"
+          variant="heading" // Changed to heading variant to use Patrick Hand font
           size={typography.fontSizes.sm}
           color={themeContext.textSecondary}
           style={{ textAlign: 'center' }}
@@ -157,36 +191,17 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Word placeholder */}
         <Text
-          variant="body"
-          size={typography.fontSizes.md}
-          bold
+          variant="heading" // Changed to heading variant to use Patrick Hand font
+          size={typography.fontSizes.md} // Increased font size for better readability
           color={themeContext.primary}
-          style={{ marginTop: 4, textAlign: 'center' }}
+          style={{ marginTop: 1, textAlign: 'center', letterSpacing: 3 }} // Added letter spacing for underscores
         >
           {generateWordPlaceholder()}
         </Text>
       </View>
 
-      {/* Right section - Drawing toggle and Settings buttons */}
+      {/* Right section - Settings button */}
       <View style={styles.rightSection}>
-        {/* Drawing toggle button */}
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            {
-              backgroundColor: isDrawing ? themeContext.primary : themeContext.backgroundAlt,
-              borderRadius: borderRadius.round,
-              marginRight: 8,
-            }
-          ]}
-          onPress={onToggleDrawing}
-        >
-          <Ionicons
-            name={isDrawing ? "brush" : "brush-outline"}
-            size={20}
-            color={isDrawing ? themeContext.buttonTextLight : themeContext.text}
-          />
-        </TouchableOpacity>
 
         {/* Settings button */}
         <TouchableOpacity
@@ -205,52 +220,5 @@ const TopBar: React.FC<TopBarProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    height: Platform.OS === 'ios' ? 60 : 64, // Reduced height by ~15%
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 6, // Reduced padding
-    borderBottomWidth: 1,
-  },
-  leftSection: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  middleSection: {
-    flex: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rightSection: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timerContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 70,
-  },
-  settingsButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 export default TopBar;

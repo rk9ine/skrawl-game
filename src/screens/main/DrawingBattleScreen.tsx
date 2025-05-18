@@ -10,10 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
-import { useDrawingStore } from '../../store/drawingStore';
 import {
   CanvasPlaceholder,
-  SkiaCanvas,
   DrawingToolbar,
   PlayerList,
   ChatSection,
@@ -27,26 +25,87 @@ const DrawingBattleScreen = () => {
   const navigation = useNavigation();
   const { chatInputPosition } = useLayoutStore();
 
-  // Get drawing store functions
-  const {
-    setColor,
-    setStrokeWidth,
-    clearCanvas,
-    undoLastPath
-  } = useDrawingStore();
+  // Create styles with theme values - skribbl.io inspired (minimal spacing)
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#FFFFFF', // Will be overridden by theme.background
+    },
+    statusBarSpacer: {
+      height: Platform.OS === 'android' ? 0 : 0, // Adjust if needed for consistency
+    },
+    content: {
+      flex: 1,
+      position: 'relative',
+      padding: 0, // No padding for edge-to-edge layout
+    },
+    canvasContainer: {
+      flex: 1,
+      marginHorizontal: 0,
+      marginVertical: 0,
+      marginBottom: 0, // No margin between canvas and toolbar
+    },
+    // Portrait mode layout (optimized for vertical screens)
+    portraitLayout: {
+      flexDirection: 'row',
+      height: Math.min(Dimensions.get('window').height * 0.25, 250), // Reduced from 0.3/300 to give more space to canvas
+      maxHeight: 250, // Reduced from 300px
+      minHeight: 160, // Reduced from 180px
+    },
+    // Landscape mode layout (optimized for horizontal screens)
+    landscapeLayout: {
+      flexDirection: 'row',
+      height: Math.min(Dimensions.get('window').height * 0.35, 180), // Reduced from 0.4/200
+      maxHeight: 180, // Reduced from 200
+      minHeight: 110, // Reduced from 120
+    },
+    // Legacy layouts (kept for compatibility)
+    verticalLayout: {
+      flexDirection: 'row',
+      height: Math.min(Dimensions.get('window').height * 0.3, 300), // Increased height by 25%
+      maxHeight: 300,
+      minHeight: 180,
+    },
+    horizontalLayout: {
+      flexDirection: 'column',
+      height: Math.min(Dimensions.get('window').height * 0.3, 300),
+      maxHeight: 300,
+      minHeight: 180,
+    },
+    mixedLayout: {
+      flexDirection: 'column',
+      height: Math.min(Dimensions.get('window').height * 0.3, 300),
+      maxHeight: 300,
+      minHeight: 180,
+    },
+    playerListContainer: {
+      flex: 1, // 50% of available space
+      marginRight: 0, // No gap between PlayerList and ChatSection
+    },
+    chatSectionContainer: {
+      flex: 1, // 50% of available space
+    },
+    sideContainer: {
+      flex: 1,
+    },
+    bottomContainer: {
+      height: spacing.xl * 1.875, // Using theme spacing.xl (32) * 1.875 instead of hardcoded 60
+    },
+  });
 
   // Fixed player list position (always on the left)
   const playerListPosition = 'left';
 
   // State
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [currentRound, setCurrentRound] = useState(1);
   const [currentWord, setCurrentWord] = useState('house');
   const [isLandscape, setIsLandscape] = useState(
     Dimensions.get('window').width > Dimensions.get('window').height
   );
+
+
 
   // Handle orientation changes
   const handleDimensionsChange = useCallback(({ window }: { window: ScaledSize }) => {
@@ -100,10 +159,7 @@ const DrawingBattleScreen = () => {
     }
   };
 
-  // Toggle drawing mode
-  const toggleDrawingMode = () => {
-    setIsDrawing(prev => !prev);
-  };
+
 
   // Handle exit game
   const onExit = () => {
@@ -121,31 +177,19 @@ const DrawingBattleScreen = () => {
         totalRounds={5}
         word={currentWord}
         timeRemaining={timeRemaining}
-        isDrawing={isDrawing}
-        onToggleDrawing={toggleDrawingMode}
-        onUndo={undoLastPath}
-        onClear={clearCanvas}
         onOpenSettings={() => setIsSettingsModalVisible(true)}
       />
 
       {/* Main Content */}
       <View style={styles.content}>
-        {/* Skia Canvas */}
+        {/* Canvas Placeholder - edge-to-edge */}
         <View style={styles.canvasContainer}>
-          {isDrawing ? (
-            <SkiaCanvas isDrawing={isDrawing} />
-          ) : (
-            <CanvasPlaceholder isDrawing={isDrawing} />
-          )}
+          <CanvasPlaceholder />
         </View>
 
-        {/* Drawing Toolbar - consistent height and styling */}
+        {/* Drawing Toolbar - visual only */}
         <DrawingToolbar
-          isDrawing={isDrawing}
-          onSelectColor={setColor}
-          onChangeBrushSize={setStrokeWidth}
-          onUndo={undoLastPath}
-          onClear={clearCanvas}
+          onOpenSettings={() => setIsSettingsModalVisible(true)}
         />
 
         {/* Message Input - conditionally positioned at top */}
@@ -171,73 +215,5 @@ const DrawingBattleScreen = () => {
     </SafeAreaView>
   );
 };
-
-// Cross-platform consistent styles
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF', // Will be overridden by theme.background
-  },
-  statusBarSpacer: {
-    height: Platform.OS === 'android' ? 0 : 0, // Adjust if needed for consistency
-  },
-  content: {
-    flex: 1,
-    position: 'relative',
-    padding: 8, // Reduced padding to maximize space
-    paddingHorizontal: 12, // Consistent horizontal padding with other components
-  },
-  canvasContainer: {
-    flex: 1,
-    marginHorizontal: 0, // Consistent margins
-    marginVertical: 0,
-  },
-  // Portrait mode layout (optimized for vertical screens)
-  portraitLayout: {
-    flexDirection: 'row',
-    height: Math.min(Dimensions.get('window').height * 0.3, 300), // Increased height by 25%
-    maxHeight: 300, // Increased from 250px
-    minHeight: 180, // Increased from 150px
-  },
-  // Landscape mode layout (optimized for horizontal screens)
-  landscapeLayout: {
-    flexDirection: 'row',
-    height: Math.min(Dimensions.get('window').height * 0.4, 200), // 40% of screen height in landscape
-    maxHeight: 200,
-    minHeight: 120,
-  },
-  // Legacy layouts (kept for compatibility)
-  verticalLayout: {
-    flexDirection: 'row',
-    height: Math.min(Dimensions.get('window').height * 0.3, 300), // Increased height by 25%
-    maxHeight: 300,
-    minHeight: 180,
-  },
-  horizontalLayout: {
-    flexDirection: 'column',
-    height: Math.min(Dimensions.get('window').height * 0.3, 300),
-    maxHeight: 300,
-    minHeight: 180,
-  },
-  mixedLayout: {
-    flexDirection: 'column',
-    height: Math.min(Dimensions.get('window').height * 0.3, 300),
-    maxHeight: 300,
-    minHeight: 180,
-  },
-  playerListContainer: {
-    width: 125, // Reduced from 165px to 125px
-    marginRight: 0, // Removed margin to eliminate gap between PlayerList and ChatSection
-  },
-  chatSectionContainer: {
-    flex: 1, // Takes remaining space
-  },
-  sideContainer: {
-    flex: 1,
-  },
-  bottomContainer: {
-    height: 60, // Reduced from 80px
-  },
-});
 
 export default DrawingBattleScreen;
