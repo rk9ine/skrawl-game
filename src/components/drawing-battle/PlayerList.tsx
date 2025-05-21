@@ -5,16 +5,47 @@ import { useTheme } from '../../theme/ThemeContext';
 import { Text } from '../ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { PlayerListPosition } from '../../store/layoutStore';
+import { useAuthStore } from '../../store/authStore';
 
-// Mock player data for placeholder with rankings
-const mockPlayers = [
-  { id: '1', name: 'Player 1', score: 1265, isDrawing: true, isReady: true, avatar: '🎨' },
-  { id: '2', name: 'Player 2', score: 1195, isDrawing: false, isReady: true, avatar: '😀' },
-  { id: '3', name: 'Player 3', score: 915, isDrawing: false, isReady: true, avatar: '🎮' },
-  { id: '4', name: 'Player 4', score: 500, isDrawing: false, isReady: false, avatar: '👤' },
-  { id: '5', name: 'Player 5', score: 240, isDrawing: false, isReady: true, avatar: '🐱' },
-  { id: '6', name: 'You', score: 0, isDrawing: false, isReady: true, avatar: '👻', isCurrentUser: true },
+// Default avatar icons for mock players
+const defaultAvatarIcons = [
+  { icon: 'brush', color: '#FF5733' },
+  { icon: 'happy', color: '#33FF57' },
+  { icon: 'rocket', color: '#3357FF' },
+  { icon: 'planet', color: '#FF33E6' },
+  { icon: 'star', color: '#FFD700' },
+  { icon: 'paw', color: '#795548' },
 ];
+
+// Mock player data for placeholder with rankings and Ionicons avatars
+const getMockPlayers = (currentUserName: string, currentUserAvatar?: string) => [
+  { id: '1', name: 'Player 1', score: 1265, isDrawing: true, isReady: true, avatarIcon: 'brush', avatarColor: '#FF5733' },
+  { id: '2', name: 'Player 2', score: 1195, isDrawing: false, isReady: true, avatarIcon: 'happy', avatarColor: '#33FF57' },
+  { id: '3', name: 'Player 3', score: 915, isDrawing: false, isReady: true, avatarIcon: 'rocket', avatarColor: '#3357FF' },
+  { id: '4', name: 'Player 4', score: 500, isDrawing: false, isReady: false, avatarIcon: 'planet', avatarColor: '#FF33E6' },
+  { id: '5', name: 'Player 5', score: 240, isDrawing: false, isReady: true, avatarIcon: 'star', avatarColor: '#FFD700' },
+  {
+    id: '6',
+    name: currentUserName || 'You',
+    score: 0,
+    isDrawing: false,
+    isReady: true,
+    avatarIcon: currentUserAvatar || 'person',
+    avatarColor: '#4361EE',
+    isCurrentUser: true
+  },
+];
+
+interface PlayerItem {
+  id: string;
+  name: string;
+  score: number;
+  isDrawing: boolean;
+  isReady: boolean;
+  avatarIcon?: string; // Ionicons name for the avatar
+  avatarColor?: string; // Background color for the avatar
+  isCurrentUser?: boolean; // Whether this is the current user
+}
 
 interface PlayerListProps {
   /**
@@ -24,17 +55,9 @@ interface PlayerListProps {
 
   /**
    * Players to display
-   * If not provided, uses mock data
+   * If not provided, uses mock data with current user info
    */
-  players?: Array<{
-    id: string;
-    name: string;
-    score: number;
-    isDrawing: boolean;
-    isReady: boolean;
-    avatar?: string; // Emoji avatar for the player
-    isCurrentUser?: boolean; // Whether this is the current user
-  }>;
+  players?: PlayerItem[];
 }
 
 /**
@@ -43,12 +66,20 @@ interface PlayerListProps {
  */
 const PlayerList: React.FC<PlayerListProps> = ({
   position,
-  players = mockPlayers,
+  players,
 }) => {
   const { theme, typography, spacing, borderRadius } = useTheme();
+  const { user } = useAuthStore();
+
+  // Get current user's profile data
+  const currentUserName = user?.displayName || 'You';
+  const currentUserAvatar = user?.avatar || 'person';
+
+  // If players are not provided, use mock data with current user info
+  const playerData = players || getMockPlayers(currentUserName, currentUserAvatar);
 
   // Sort players by score (highest first)
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  const sortedPlayers = [...playerData].sort((a, b) => b.score - a.score);
 
   // Add ranking to each player
   const rankedPlayers = sortedPlayers.map((player, index) => ({
@@ -105,9 +136,11 @@ const PlayerList: React.FC<PlayerListProps> = ({
     playerScore: {
       marginTop: 0, // Removed spacing between name and score
     },
-    playerAvatar: {
-      width: 32, // Reduced width for avatar
-      textAlign: 'center',
+    avatarContainer: {
+      width: 28, // Slightly smaller than the previous text avatar
+      height: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
       marginLeft: spacing.xxs, // Reduced spacing
     },
     currentUserText: {
@@ -162,13 +195,20 @@ const PlayerList: React.FC<PlayerListProps> = ({
         </View>
       </View>
 
-      {/* Player avatar */}
-      <Text
-        style={styles.playerAvatar}
-        size={typography.fontSizes.lg} // Reduced font size
-      >
-        {item.avatar || '👤'}
-      </Text>
+      {/* Player avatar - using Ionicons instead of emoji text */}
+      <View style={[
+        styles.avatarContainer,
+        {
+          backgroundColor: item.avatarColor || theme.primary,
+          borderRadius: borderRadius.round,
+        }
+      ]}>
+        <Ionicons
+          name={(item.avatarIcon as any) || 'person'}
+          size={20}
+          color="#FFFFFF"
+        />
+      </View>
     </View>
   );
 

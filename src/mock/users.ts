@@ -4,7 +4,9 @@ export interface MockUser {
   email: string;
   displayName: string;
   avatarUrl?: string;
+  avatar?: string; // Emoji avatar
   createdAt: string;
+  hasCompletedProfileSetup?: boolean; // Flag to track if user has completed profile setup
   stats: {
     gamesPlayed: number;
     gamesWon: number;

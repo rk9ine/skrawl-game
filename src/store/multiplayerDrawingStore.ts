@@ -28,7 +28,7 @@ const defaultCurrentPlayer: DrawingPlayer = {
   id: currentMockUser?.id || 'local-player',
   name: currentMockUser?.displayName || 'You',
   color: '#4361EE',
-  avatar: '🎨',
+  avatar: currentMockUser?.avatar || '🎨',
   isActive: true,
   isDrawing: true,
 };

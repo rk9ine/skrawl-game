@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
+import { useAuthStore } from '../../store/authStore';
 import {
   CanvasPlaceholder,
   DrawingToolbar,
@@ -24,6 +25,7 @@ const DrawingBattleScreen = () => {
   const { theme, spacing } = useTheme();
   const navigation = useNavigation();
   const { chatInputPosition } = useLayoutStore();
+  const { user } = useAuthStore();
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -105,6 +107,71 @@ const DrawingBattleScreen = () => {
     Dimensions.get('window').width > Dimensions.get('window').height
   );
 
+  // Generate custom player data with current user's profile
+  const getCustomPlayerData = useCallback(() => {
+    // If user is not logged in or skipped, return undefined to use default mock data
+    if (!user) return undefined;
+
+    // Create a custom player list with the current user's profile data
+    return [
+      {
+        id: '1',
+        name: 'Player 1',
+        score: 1265,
+        isDrawing: true,
+        isReady: true,
+        avatarIcon: 'brush',
+        avatarColor: '#FF5733'
+      },
+      {
+        id: '2',
+        name: 'Player 2',
+        score: 1195,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'happy',
+        avatarColor: '#33FF57'
+      },
+      {
+        id: '3',
+        name: 'Player 3',
+        score: 915,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'rocket',
+        avatarColor: '#3357FF'
+      },
+      {
+        id: '4',
+        name: 'Player 4',
+        score: 500,
+        isDrawing: false,
+        isReady: false,
+        avatarIcon: 'planet',
+        avatarColor: '#FF33E6'
+      },
+      {
+        id: '5',
+        name: 'Player 5',
+        score: 240,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'star',
+        avatarColor: '#FFD700'
+      },
+      {
+        id: '6',
+        name: user.displayName || 'You',
+        score: 0,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: user.avatar || 'person',
+        avatarColor: '#4361EE',
+        isCurrentUser: true
+      },
+    ];
+  }, [user]);
+
 
 
   // Handle orientation changes
@@ -131,13 +198,19 @@ const DrawingBattleScreen = () => {
 
   // Get layout for player list and chat section - consistent across platforms
   const getPlayerListChatLayout = () => {
+    // Get custom player data with current user's profile
+    const customPlayerData = getCustomPlayerData();
+
     // Use different layouts based on orientation
     if (isLandscape) {
       // In landscape mode, use a vertical layout (side by side)
       return (
         <View style={styles.landscapeLayout}>
           <View style={styles.playerListContainer}>
-            <PlayerList position={playerListPosition} />
+            <PlayerList
+              position={playerListPosition}
+              players={customPlayerData}
+            />
           </View>
           <View style={styles.chatSectionContainer}>
             <ChatSection position={playerListPosition === 'left' ? 'right' : 'left'} />
@@ -149,7 +222,10 @@ const DrawingBattleScreen = () => {
       return (
         <View style={styles.portraitLayout}>
           <View style={styles.playerListContainer}>
-            <PlayerList position={playerListPosition} />
+            <PlayerList
+              position={playerListPosition}
+              players={customPlayerData}
+            />
           </View>
           <View style={styles.chatSectionContainer}>
             <ChatSection position={playerListPosition === 'left' ? 'right' : 'left'} />

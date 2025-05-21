@@ -1,5 +1,6 @@
 export type AuthStackParamList = {
   Login: undefined;
+  ProfileSetup: undefined;
 };
 
 export type MainStackParamList = {
@@ -14,6 +15,7 @@ export type MainStackParamList = {
 
 export type RootStackParamList = {
   Auth: undefined;
+  ProfileSetup: undefined;
   Main: undefined;
   AuthPrompt: { redirectTo: keyof MainStackParamList };
 };

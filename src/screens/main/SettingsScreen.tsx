@@ -8,16 +8,20 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { Text, SafeAreaContainer } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
+import { MainStackParamList } from '../../types/navigation';
+
+type SettingsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 const SettingsScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows, isDark, setThemeType, themeType } = useTheme();
-  const navigation = useNavigation();
-  const { user, isSkipped, signOut } = useAuthStore();
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { user, isSkipped, signOut, resetUserProfile } = useAuthStore();
 
   // Create basic styles without theme values
   const styles = StyleSheet.create({
@@ -101,6 +105,29 @@ const SettingsScreen = () => {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign Out', onPress: signOut },
+      ]
+    );
+  };
+
+  const handleResetProfile = () => {
+    Alert.alert(
+      'Reset Profile',
+      'Are you sure you want to reset your profile? You will need to set up your username and avatar again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset Profile',
+          onPress: () => {
+            // First reset the profile
+            resetUserProfile();
+
+            // Then sign out and sign back in to trigger the profile setup flow
+            // This will automatically redirect to the ProfileSetup screen
+            // because hasCompletedProfileSetup will be false
+            signOut();
+          },
+          style: 'destructive'
+        },
       ]
     );
   };
@@ -237,28 +264,59 @@ const SettingsScreen = () => {
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={[
-                  styles.signOutButton,
-                  {
-                    borderColor: theme.border,
-                    margin: spacing.md,
-                    borderRadius: borderRadius.lg
-                  }
-                ]}
-                onPress={handleSignOut}
-              >
-                <Text style={[
-                  styles.signOutButtonText,
-                  {
-                    fontFamily: typography.fontFamily.primary,
-                    color: theme.error,
-                    fontSize: typography.fontSizes.md
-                  }
-                ]}>
-                  Sign Out
-                </Text>
-              </TouchableOpacity>
+              <>
+                {/* Reset Profile Button */}
+                {user?.hasCompletedProfileSetup && (
+                  <TouchableOpacity
+                    style={[
+                      styles.signOutButton,
+                      {
+                        borderColor: theme.border,
+                        marginHorizontal: spacing.md,
+                        marginTop: spacing.md,
+                        borderRadius: borderRadius.lg,
+                        backgroundColor: theme.backgroundAlt,
+                      }
+                    ]}
+                    onPress={handleResetProfile}
+                  >
+                    <Text style={[
+                      styles.signOutButtonText,
+                      {
+                        fontFamily: typography.fontFamily.primary,
+                        color: theme.textSecondary,
+                        fontSize: typography.fontSizes.md
+                      }
+                    ]}>
+                      Reset Profile
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Sign Out Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.signOutButton,
+                    {
+                      borderColor: theme.border,
+                      margin: spacing.md,
+                      borderRadius: borderRadius.lg
+                    }
+                  ]}
+                  onPress={handleSignOut}
+                >
+                  <Text style={[
+                    styles.signOutButtonText,
+                    {
+                      fontFamily: typography.fontFamily.primary,
+                      color: theme.error,
+                      fontSize: typography.fontSizes.md
+                    }
+                  ]}>
+                    Sign Out
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
