@@ -10,6 +10,7 @@ export type MainStackParamList = {
   PrivateMatch: { matchId?: string };
   Settings: undefined;
   SkiaCanvasTest: undefined;
+  HTML5CanvasTest: undefined;
   AvatarSelection: undefined;
 };
 

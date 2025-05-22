@@ -53,6 +53,7 @@ const DashboardScreen = () => {
     'drawing-battle': new Animated.Value(1),
     'whiteboard': new Animated.Value(1),
     'skia-canvas': new Animated.Value(1),
+    'html5-canvas': new Animated.Value(1),
   }).current;
 
   // State for layout
@@ -118,6 +119,15 @@ const DashboardScreen = () => {
       iconColor: theme.info,
       iconBgColor: theme.info + '20',
       navigateTo: 'SkiaCanvasTest',
+    },
+    {
+      id: 'html5-canvas',
+      title: 'HTML5 Canvas Test',
+      description: 'High-performance drawing with HTML5 Canvas',
+      icon: 'globe-outline',
+      iconColor: theme.success,
+      iconBgColor: theme.success + '20',
+      navigateTo: 'HTML5CanvasTest',
     },
   ];
 
