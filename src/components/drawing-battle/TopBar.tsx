@@ -48,7 +48,7 @@ const TopBar: React.FC<TopBarProps> = ({
   const styles = StyleSheet.create({
     container: {
       width: '100%',
-      height: Platform.OS === 'ios' ? spacing.xl + spacing.sm : spacing.xl + spacing.sm, // Increased height to prevent cutoff
+      height: Platform.OS === 'ios' ? spacing.xl + spacing.sm : spacing.xl + spacing.sm, // Consistent height across platforms
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -60,6 +60,7 @@ const TopBar: React.FC<TopBarProps> = ({
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingVertical: Platform.OS === 'ios' ? spacing.xxs : 0, // Extra padding on iOS to prevent overflow
     },
     middleSection: {
       flex: 2,
@@ -73,12 +74,12 @@ const TopBar: React.FC<TopBarProps> = ({
     },
     timerContainer: {
       paddingHorizontal: spacing.xxs, // Minimal horizontal padding
-      paddingVertical: spacing.xxs / 2, // Slightly increased padding
+      paddingVertical: Platform.OS === 'ios' ? 1 : spacing.xxs / 2, // Reduced padding on iOS
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: 54, // Compact width
-      height: spacing.md + 2, // Slightly increased height to prevent text cutoff
-      marginBottom: 2, // Added margin to prevent cutoff
+      height: Platform.OS === 'ios' ? spacing.md : spacing.md + 2, // Reduced height on iOS
+      marginBottom: 1, // Reduced margin to prevent overflow
     },
     settingsButton: {
       width: spacing.md + spacing.xs, // Reduced size
@@ -151,8 +152,8 @@ const TopBar: React.FC<TopBarProps> = ({
           ]}
         >
           <Text
-            variant="heading" // Changed to heading variant to use Patrick Hand font
-            size={typography.fontSizes.md} // Increased font size for better readability
+            variant="heading" // Using heading variant for Patrick Hand font
+            size={Platform.OS === 'ios' ? typography.fontSizes.sm : typography.fontSizes.md} // Smaller size on iOS
             color={
               timeRemaining > 30
                 ? themeContext.success
@@ -160,7 +161,10 @@ const TopBar: React.FC<TopBarProps> = ({
                   ? themeContext.warning
                   : themeContext.error
             }
-            style={{ lineHeight: spacing.md }} // Added line height to prevent cutoff
+            style={{
+              lineHeight: Platform.OS === 'ios' ? spacing.md - 2 : spacing.md, // Reduced line height on iOS
+              fontWeight: '400', // Ensure consistent font weight
+            }}
           >
             {formatTimeRemaining()}
           </Text>
@@ -168,10 +172,15 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Round indicator */}
         <Text
-          variant="heading" // Changed to heading variant to use Patrick Hand font
-          size={typography.fontSizes.sm} // Increased font size for better readability
+          variant="heading" // Using heading variant for Patrick Hand font
+          size={typography.fontSizes.xs} // Reduced font size for better fit
           color={themeContext.text}
-          style={{ marginTop: 2, textAlign: 'center', marginBottom: 2 }} // Adjusted margins
+          style={{
+            marginTop: 1,
+            textAlign: 'center',
+            marginBottom: 0,
+            lineHeight: Platform.OS === 'ios' ? spacing.sm : undefined // Control line height on iOS
+          }}
         >
           Round {round}/{totalRounds}
         </Text>
