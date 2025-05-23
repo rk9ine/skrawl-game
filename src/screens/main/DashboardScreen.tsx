@@ -52,8 +52,7 @@ const DashboardScreen = () => {
   const cardAnimations = useRef<{ [key: string]: Animated.Value }>({
     'drawing-battle': new Animated.Value(1),
     'whiteboard': new Animated.Value(1),
-    'skia-canvas': new Animated.Value(1),
-    'html5-canvas': new Animated.Value(1),
+    'leaderboard': new Animated.Value(1),
   }).current;
 
   // State for layout
@@ -105,29 +104,20 @@ const DashboardScreen = () => {
     {
       id: 'whiteboard',
       title: 'Whiteboard',
-      description: 'Free-form drawing canvas for creative expression',
+      description: 'Advanced drawing canvas with Skia rendering',
       icon: 'brush',
       iconColor: theme.secondary,
       iconBgColor: theme.secondary + '20',
-      navigateTo: 'Whiteboard',
-    },
-    {
-      id: 'skia-canvas',
-      title: 'Skia Canvas Test',
-      description: 'Experimental drawing features with Skia',
-      icon: 'code-working',
-      iconColor: theme.info,
-      iconBgColor: theme.info + '20',
       navigateTo: 'SkiaCanvasTest',
     },
     {
-      id: 'html5-canvas',
-      title: 'HTML5 Canvas Test',
-      description: 'High-performance drawing with HTML5 Canvas',
-      icon: 'globe-outline',
-      iconColor: theme.success,
-      iconBgColor: theme.success + '20',
-      navigateTo: 'HTML5CanvasTest',
+      id: 'leaderboard',
+      title: 'Leaderboard',
+      description: 'View top players and your ranking',
+      icon: 'trophy',
+      iconColor: theme.warning,
+      iconBgColor: theme.warning + '20',
+      navigateTo: 'Leaderboard',
     },
   ];
 

@@ -349,7 +349,7 @@ const SkiaCanvasTestScreen = () => {
         </TouchableOpacity>
 
         <Text variant="heading">
-          Skia Canvas Test
+          Whiteboard
         </Text>
 
         <View style={{ width: 24 }} />

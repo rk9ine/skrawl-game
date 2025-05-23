@@ -11,12 +11,11 @@ import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 // Main Screens
 import DashboardScreen from '../screens/main/DashboardScreen';
-import WhiteboardScreen from '../screens/main/WhiteboardScreen';
 import DrawingBattleScreen from '../screens/main/DrawingBattleScreen';
 import PrivateMatchScreen from '../screens/main/PrivateMatchScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
 import SkiaCanvasTestScreen from '../screens/main/SkiaCanvasTestScreen';
-import HTML5CanvasTestScreen from '../screens/main/HTML5CanvasTestScreen';
+import LeaderboardScreen from '../screens/main/LeaderboardScreen';
 import AvatarSelectionScreen from '../screens/main/AvatarSelectionScreen';
 
 // Loading Screen
@@ -69,12 +68,11 @@ const MainNavigator = () => {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="Dashboard" component={DashboardScreen} />
-      <MainStack.Screen name="Whiteboard" component={WhiteboardScreen} />
       <MainStack.Screen name="DrawingBattle" component={DrawingBattleScreen} />
       <MainStack.Screen name="PrivateMatch" component={PrivateMatchScreen} />
       <MainStack.Screen name="Settings" component={SettingsScreen} />
       <MainStack.Screen name="SkiaCanvasTest" component={SkiaCanvasTestScreen} />
-      <MainStack.Screen name="HTML5CanvasTest" component={HTML5CanvasTestScreen} />
+      <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
       <MainStack.Screen name="AvatarSelection" component={AvatarSelectionScreen} />
     </MainStack.Navigator>
   );

@@ -5,12 +5,11 @@ export type AuthStackParamList = {
 
 export type MainStackParamList = {
   Dashboard: undefined;
-  Whiteboard: undefined;
   DrawingBattle: undefined;
   PrivateMatch: { matchId?: string };
   Settings: undefined;
   SkiaCanvasTest: undefined;
-  HTML5CanvasTest: undefined;
+  Leaderboard: undefined;
   AvatarSelection: undefined;
 };
 
