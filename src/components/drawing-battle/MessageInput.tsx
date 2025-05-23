@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
-import { ChatInputPosition } from '../../store/layoutStore';
+import { ChatInputPosition, useLayoutStore } from '../../store/layoutStore';
 import { Text } from '../ui/Text';
 
 interface MessageInputProps {
@@ -17,6 +17,11 @@ interface MessageInputProps {
   message: string;
 
   /**
+   * Whether rate limiting is active
+   */
+  isRateLimited?: boolean;
+
+  /**
    * Callback when a message is sent
    */
   onSendMessage?: (message: string) => void;
@@ -25,6 +30,11 @@ interface MessageInputProps {
    * Callback to show virtual keyboard
    */
   onShowKeyboard?: () => void;
+
+  /**
+   * Callback when message changes (for system keyboard)
+   */
+  onMessageChange?: (message: string) => void;
 }
 
 /**
@@ -33,10 +43,13 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({
   position,
   message,
+  isRateLimited = false,
   onSendMessage,
   onShowKeyboard,
+  onMessageChange,
 }) => {
   const { theme, spacing, borderRadius, typography } = useTheme();
+  const { useSystemKeyboard } = useLayoutStore();
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -62,10 +75,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
     },
     messageDisplay: {
       flex: 1,
-      height: spacing.md + spacing.xxs, // Consistent height
+      height: spacing.md + spacing.xxs, // Fixed height
+      maxHeight: spacing.md + spacing.xxs, // Prevent expansion
       justifyContent: 'center',
       paddingHorizontal: spacing.xs,
       minHeight: 32,
+      overflow: 'hidden', // Prevent content overflow
     },
     messageText: {
       fontSize: typography.fontSizes.sm,
@@ -114,44 +129,83 @@ const MessageInput: React.FC<MessageInputProps> = ({
           }
         ]}
       >
-        <TouchableOpacity
-          style={styles.messageDisplay}
-          onPress={handleMessageDisplayPress}
-          activeOpacity={0.7}
-        >
-          {message ? (
-            <Text
-              variant="body"
-              size={typography.fontSizes.sm}
-              color={theme.text}
-              style={styles.messageText}
-            >
-              {message}
-            </Text>
-          ) : (
-            <Text
-              variant="body"
-              size={typography.fontSizes.sm}
-              color={theme.textDisabled}
-              style={styles.placeholderText}
-            >
-              Type a message...
-            </Text>
-          )}
-        </TouchableOpacity>
+        {useSystemKeyboard ? (
+          // System keyboard mode - show TextInput
+          <TextInput
+            style={[styles.messageDisplay, {
+              color: theme.text,
+              fontSize: typography.fontSizes.sm,
+              paddingHorizontal: spacing.xs,
+              paddingVertical: 0, // Remove vertical padding to prevent expansion
+              textAlignVertical: 'center', // Android fix
+              includeFontPadding: false, // Android: remove extra font padding
+              textAlign: 'left', // Ensure consistent text alignment
+            }]}
+            placeholder="Type a message..."
+            placeholderTextColor={theme.textDisabled}
+            value={message}
+            onChangeText={onMessageChange}
+            returnKeyType="send"
+            onSubmitEditing={() => handleSendMessage()}
+            multiline={false}
+            scrollEnabled={false}
+            editable={true}
+            autoCorrect={true}
+            autoCapitalize="sentences"
+            maxLength={50}
+            numberOfLines={1}
+            blurOnSubmit={true}
+            disableFullscreenUI={true} // Android: prevent fullscreen mode
+          />
+        ) : (
+          // Virtual keyboard mode - show display area
+          <TouchableOpacity
+            style={styles.messageDisplay}
+            onPress={handleMessageDisplayPress}
+            activeOpacity={0.7}
+          >
+            {message ? (
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color={theme.text}
+                style={styles.messageText}
+              >
+                {message}
+              </Text>
+            ) : (
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color={theme.textDisabled}
+                style={styles.placeholderText}
+              >
+                Type a message...
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[
             styles.sendButton,
             {
-              backgroundColor: message.trim() ? theme.primary : theme.textDisabled,
+              backgroundColor: isRateLimited
+                ? theme.error
+                : message.trim()
+                  ? theme.primary
+                  : theme.textDisabled,
               borderRadius: borderRadius.round,
             }
           ]}
           onPress={handleSendMessage}
-          disabled={!message.trim()}
+          disabled={!message.trim() || isRateLimited}
         >
-          <Ionicons name="send" size={18} color="#FFFFFF" />
+          <Ionicons
+            name={isRateLimited ? "time-outline" : "send"}
+            size={18}
+            color="#FFFFFF"
+          />
         </TouchableOpacity>
       </View>
     </View>

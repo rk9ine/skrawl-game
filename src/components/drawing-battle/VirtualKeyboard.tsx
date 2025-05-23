@@ -41,12 +41,12 @@ interface VirtualKeyboardProps {
   onHide: () => void;
 }
 
-// Emoji categories for mobile-style emoji picker
+// Enhanced emoji categories for competitive drawing games
 const EMOJI_CATEGORIES = {
-  smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
-  gestures: ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏'],
-  hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟'],
-  objects: ['🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉', '⭐', '🌟', '💫', '✨', '🔥', '💯', '💢', '💥', '💦', '💨']
+  faces: ['😂', '🤣', '😭', '😤', '🤬', '😱', '🤯', '🥶', '🥵', '😵', '🤮', '🤢', '🤧', '😷', '🤒', '🤕', '🤠', '🥳', '🤡', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎭', '😈', '👿', '🤓', '🧐', '🤪'],
+  animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🦍', '🦧', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜'],
+  competitive: ['🏆', '🥇', '🥈', '🥉', '🎯', '🎮', '🕹️', '🎲', '🃏', '🎪', '🎨', '🖌️', '✏️', '🖍️', '🖊️', '✒️', '🔥', '💯', '⚡', '💥', '💢', '💪', '👊', '✊', '🤜', '🤛', '👏', '🙌', '🤝', '🤞', '🤟'],
+  reactions: ['😍', '🥰', '😘', '🤩', '😎', '🤨', '🧐', '🙄', '😏', '😒', '😑', '😐', '🤐', '🤫', '🤭', '🤔', '🤗', '🤤', '😴', '😪', '🥱', '😵‍💫', '🤠', '🥸', '😇', '🤓', '🤖', '👹', '👺', '🤡']
 };
 
 // Standard mobile keyboard layout
@@ -72,9 +72,16 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const screenHeight = Dimensions.get('window').height;
 
-  // Emoji picker state
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<keyof typeof EMOJI_CATEGORIES>('smileys');
+  // Emoji picker state - toggles between keyboard and emoji modes
+  const [isEmojiMode, setIsEmojiMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<keyof typeof EMOJI_CATEGORIES>('faces');
+
+  // Reset emoji mode when keyboard becomes visible
+  useEffect(() => {
+    if (visible) {
+      setIsEmojiMode(false);
+    }
+  }, [visible]);
 
   // Animate keyboard in/out
   useEffect(() => {
@@ -120,6 +127,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 8,
+      minHeight: 250, // Ensure minimum height for visibility
     },
     keyboardHeader: {
       flexDirection: 'row',
@@ -222,13 +230,10 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       flex: 1,
       minWidth: 32,
     },
-    // Emoji picker styles
+    // Emoji picker styles - uses full keyboard space
     emojiPickerContainer: {
-      backgroundColor: `${theme.surface}F0`, // 95% opacity
-      height: 200,
-      marginBottom: spacing.xs,
-      borderRadius: borderRadius.lg,
-      padding: spacing.xs,
+      flex: 1,
+      padding: spacing.sm,
     },
     emojiCategoryTabs: {
       flexDirection: 'row',
@@ -276,15 +281,18 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
     return null;
   }
 
-  // Handle emoji picker toggle
+  // Debug: Log keyboard state
+  console.log('VirtualKeyboard render:', { visible, isEmojiMode, currentMessage });
+
+  // Handle emoji mode toggle
   const handleEmojiKeyPress = () => {
-    setShowEmojiPicker(!showEmojiPicker);
+    setIsEmojiMode(!isEmojiMode);
   };
 
   // Handle emoji selection
   const handleEmojiSelect = (emoji: string) => {
     onKeyPress(emoji);
-    setShowEmojiPicker(false); // Close picker after selection
+    setIsEmojiMode(false); // Return to keyboard mode after selection
   };
 
   // Handle category selection
@@ -317,16 +325,14 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
     </TouchableOpacity>
   );
 
-  // Render emoji picker
+  // Render emoji picker (replaces entire keyboard)
   const renderEmojiPicker = () => {
-    if (!showEmojiPicker) return null;
-
     const categoryKeys = Object.keys(EMOJI_CATEGORIES) as (keyof typeof EMOJI_CATEGORIES)[];
     const categoryIcons = {
-      smileys: '😊',
-      gestures: '👍',
-      hearts: '❤️',
-      objects: '🎉'
+      faces: '🤡',
+      animals: '🐶',
+      competitive: '🏆',
+      reactions: '🤔'
     };
 
     // Create rows of emojis (8 per row)
@@ -338,6 +344,23 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
 
     return (
       <View style={styles.emojiPickerContainer}>
+        {/* Header with back button */}
+        <View style={styles.keyboardHeader}>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerLabel}>Choose emoji:</Text>
+            <Text style={styles.headerMessage}>
+              {currentMessage || 'Tap an emoji to add it'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setIsEmojiMode(false)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="keypad-outline" size={18} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
         {/* Category tabs */}
         <View style={styles.emojiCategoryTabs}>
           {categoryKeys.map((category) => (
@@ -380,7 +403,7 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [200, 0], // Reduced slide distance for compact keyboard
+    outputRange: [300, 0], // Increase slide distance to ensure visibility
   });
 
   const opacity = slideAnim.interpolate({
@@ -397,71 +420,76 @@ const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       />
 
       <Animated.View style={[styles.keyboardContainer, { transform: [{ translateY }] }]}>
-        {/* Enhanced Header with real-time typing display */}
-        <View style={styles.keyboardHeader}>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerLabel}>Your guess:</Text>
-            <Text style={styles.headerMessage}>
-              {currentMessage || 'Start typing...'}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={onHide}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={18} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        {isEmojiMode ? (
+          // Show emoji picker (replaces entire keyboard)
+          renderEmojiPicker()
+        ) : (
+          // Show regular keyboard
+          <>
+            {/* Enhanced Header with real-time typing display */}
+            <View style={styles.keyboardHeader}>
+              <View style={styles.headerContent}>
+                <Text style={styles.headerLabel}>Your guess:</Text>
+                <Text style={styles.headerMessage}>
+                  {currentMessage || 'Start typing...'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={onHide}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
-        {/* First row - QWERTYUIOP */}
-        <View style={[styles.keyboardRow, styles.standardRow]}>
-          {KEYBOARD_ROWS[0].map((key) => renderKey(key))}
-        </View>
+            {/* First row - QWERTYUIOP */}
+            <View style={[styles.keyboardRow, styles.standardRow]}>
+              {KEYBOARD_ROWS[0].map((key) => renderKey(key))}
+            </View>
 
-        {/* Second row - ASDFGHJKL */}
-        <View style={[styles.keyboardRow, styles.middleRow]}>
-          {KEYBOARD_ROWS[1].map((key) => renderKey(key))}
-        </View>
+            {/* Second row - ASDFGHJKL */}
+            <View style={[styles.keyboardRow, styles.middleRow]}>
+              {KEYBOARD_ROWS[1].map((key) => renderKey(key))}
+            </View>
 
-        {/* Emoji picker (shows above keyboard when active) */}
-        {renderEmojiPicker()}
+            {/* Third row - Emoji + ZXCVBNM + Backspace */}
+            <View style={[styles.keyboardRow, styles.bottomRow]}>
+              {renderSpecialKey('happy-outline', handleEmojiKeyPress, styles.specialKey)}
+              {KEYBOARD_ROWS[2].map((key) => renderKey(key))}
+              {renderSpecialKey('backspace', onBackspace, styles.specialKey)}
+            </View>
 
-        {/* Third row - Emoji + ZXCVBNM + Backspace */}
-        <View style={[styles.keyboardRow, styles.bottomRow]}>
-          {renderSpecialKey('happy-outline', handleEmojiKeyPress, styles.specialKey)}
-          {KEYBOARD_ROWS[2].map((key) => renderKey(key))}
-          {renderSpecialKey('backspace', onBackspace, styles.specialKey)}
-        </View>
+            {/* Fourth row - Punctuation and Space */}
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.key, styles.punctuationKey]}
+                onPress={() => onKeyPress('.')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.keyText}>.</Text>
+              </TouchableOpacity>
 
-        {/* Fourth row - Punctuation and Space */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.key, styles.punctuationKey]}
-            onPress={() => onKeyPress('.')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.keyText}>.</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.key, styles.spaceKey]}
+                onPress={onSpace}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.keyText, { fontSize: typography.fontSizes.sm }]}>space</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.key, styles.spaceKey]}
-            onPress={onSpace}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.keyText, { fontSize: typography.fontSizes.sm }]}>space</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.key, styles.punctuationKey]}
+                onPress={() => onKeyPress('-')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.keyText}>-</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.key, styles.punctuationKey]}
-            onPress={() => onKeyPress('-')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.keyText}>-</Text>
-          </TouchableOpacity>
-
-          {renderSpecialKey('return-down-back', onEnter, styles.specialKey)}
-        </View>
+              {renderSpecialKey('return-down-back', onEnter, styles.specialKey)}
+            </View>
+          </>
+        )}
       </Animated.View>
     </Animated.View>
   );

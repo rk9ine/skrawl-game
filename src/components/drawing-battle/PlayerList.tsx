@@ -130,8 +130,16 @@ const PlayerList: React.FC<PlayerListProps> = ({
     nameScoreContainer: {
       flexDirection: 'column',
     },
+    nameWithIconContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     playerName: {
       flexWrap: 'wrap',
+      flex: 1,
+    },
+    activeDrawerIcon: {
+      marginLeft: spacing.xxs,
     },
     playerScore: {
       marginTop: 0, // Removed spacing between name and score
@@ -148,69 +156,85 @@ const PlayerList: React.FC<PlayerListProps> = ({
     }
   });
 
-  const renderPlayerItem = ({ item }: { item: typeof rankedPlayers[0] }) => (
-    <View
-      style={[
-        styles.playerItem,
-        {
-          backgroundColor: item.isDrawing ? theme.primary + '20' : 'transparent',
-          borderBottomColor: theme.divider,
-        }
-      ]}
-    >
-      {/* Player rank */}
-      <View style={styles.rankContainer}>
-        <Text
-          variant="heading"
-          size={typography.fontSizes.xs} // Reduced font size
-          color={theme.textSecondary}
-        >
-          #{item.rank}
-        </Text>
-      </View>
+  const renderPlayerItem = ({ item, index }: { item: typeof rankedPlayers[0], index: number }) => {
+    // Alternating background: Player 1 & 3 have background, Player 2 & 4 don't
+    const hasBackground = (index + 1) % 2 === 1; // Odd positions (1, 3, 5...) get background
 
-      {/* Player name and score */}
-      <View style={styles.playerInfoContainer}>
-        <View style={styles.nameScoreContainer}>
+    return (
+      <View
+        style={[
+          styles.playerItem,
+          {
+            backgroundColor: hasBackground ? theme.backgroundAlt : 'transparent',
+            borderBottomColor: theme.divider,
+          }
+        ]}
+      >
+        {/* Player rank */}
+        <View style={styles.rankContainer}>
           <Text
             variant="heading"
-            size={typography.fontSizes.sm} // Reduced font size
-            color={item.isDrawing ? theme.primary : theme.text}
-            style={[
-              styles.playerName,
-              item.isCurrentUser && styles.currentUserText
-            ]}
-            numberOfLines={1}
-          >
-            {item.name}
-          </Text>
-          <Text
-            variant="body"
             size={typography.fontSizes.xs} // Reduced font size
             color={theme.textSecondary}
-            style={styles.playerScore}
           >
-            {item.score} points
+            #{item.rank}
           </Text>
         </View>
-      </View>
 
-      {/* Player avatar - using Ionicons instead of emoji text */}
-      <View style={[
-        styles.avatarContainer,
-        {
-          backgroundColor: item.avatarColor || theme.primary,
-          borderRadius: borderRadius.round,
-        }
-      ]}>
-        <Ionicons
-          name={(item.avatarIcon as any) || 'person'}
-          size={20}
-          color="#FFFFFF"
-        />
+        {/* Player name and score with active drawer icon */}
+        <View style={styles.playerInfoContainer}>
+          <View style={styles.nameScoreContainer}>
+            <View style={styles.nameWithIconContainer}>
+              <Text
+                variant="heading"
+                size={typography.fontSizes.sm} // Reduced font size
+                color={theme.text}
+                style={[
+                  styles.playerName,
+                  item.isCurrentUser && styles.currentUserText
+                ]}
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              {/* Active drawer icon */}
+              {item.isDrawing && (
+                <Ionicons
+                  name="brush"
+                  size={16}
+                  color={theme.primary}
+                  style={styles.activeDrawerIcon}
+                />
+              )}
+            </View>
+            <Text
+              variant="body"
+              size={typography.fontSizes.xs} // Reduced font size
+              color={theme.textSecondary}
+              style={styles.playerScore}
+            >
+              {item.score} points
+            </Text>
+          </View>
+        </View>
+
+        {/* Player avatar - using Ionicons instead of emoji text */}
+        <View style={[
+          styles.avatarContainer,
+          {
+            backgroundColor: item.avatarColor || theme.primary,
+            borderRadius: borderRadius.round,
+          }
+        ]}>
+          <Ionicons
+            name={(item.avatarIcon as any) || 'person'}
+            size={20}
+            color="#FFFFFF"
+          />
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View
@@ -237,7 +261,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
       <FlatList
         data={rankedPlayers}
-        renderItem={renderPlayerItem}
+        renderItem={({ item, index }) => renderPlayerItem({ item, index })}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: spacing.xxs }}

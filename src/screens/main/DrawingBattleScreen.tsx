@@ -25,7 +25,7 @@ import {
 const DrawingBattleScreen = () => {
   const { theme, spacing } = useTheme();
   const navigation = useNavigation();
-  const { chatInputPosition } = useLayoutStore();
+  const { chatInputPosition, useSystemKeyboard } = useLayoutStore();
   const { user } = useAuthStore();
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
@@ -116,6 +116,16 @@ const DrawingBattleScreen = () => {
   // Virtual keyboard state
   const [currentMessage, setCurrentMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Rate limiting state
+  const [lastMessageTime, setLastMessageTime] = useState(0);
+  const [messageCount, setMessageCount] = useState(0);
+  const [rateLimitCooldown, setRateLimitCooldown] = useState(false);
+
+  // Rate limiting constants
+  const MESSAGE_RATE_LIMIT = 3; // Max 3 messages
+  const RATE_LIMIT_WINDOW = 10000; // Per 10 seconds
+  const RATE_LIMIT_COOLDOWN = 5000; // 5 second cooldown when limit hit
 
   // Generate custom player data with current user's profile
   const getCustomPlayerData = useCallback(() => {
@@ -282,29 +292,82 @@ const DrawingBattleScreen = () => {
   };
 
   const handleKeyPress = (key: string) => {
-    setCurrentMessage(prev => prev + key);
+    setCurrentMessage(prev => {
+      const newMessage = prev + key;
+      // Enforce 50 character limit
+      return newMessage.length <= 50 ? newMessage : prev;
+    });
   };
 
   const handleBackspace = () => {
-    setCurrentMessage(prev => prev.slice(0, -1));
+    setCurrentMessage(prev => {
+      if (prev.length === 0) return prev;
+
+      // Handle emoji deletion properly by using Array.from to split by Unicode characters
+      const chars = Array.from(prev);
+      return chars.slice(0, -1).join('');
+    });
   };
 
   const handleSpace = () => {
-    setCurrentMessage(prev => prev + ' ');
+    setCurrentMessage(prev => {
+      const newMessage = prev + ' ';
+      // Enforce 50 character limit
+      return newMessage.length <= 50 ? newMessage : prev;
+    });
   };
 
   const handleSendMessage = (message?: string) => {
     const messageToSend = message || currentMessage;
-    if (messageToSend.trim()) {
-      // TODO: Send message to chat/game logic
-      console.log('Sending message:', messageToSend);
-      setCurrentMessage('');
-      setIsKeyboardVisible(false);
+    if (!messageToSend.trim()) return;
+
+    // Check rate limiting
+    const now = Date.now();
+
+    // If in cooldown, prevent sending
+    if (rateLimitCooldown) {
+      console.log('Rate limited: Please wait before sending another message');
+      return;
     }
+
+    // Reset message count if window has passed
+    if (now - lastMessageTime > RATE_LIMIT_WINDOW) {
+      setMessageCount(1);
+      setLastMessageTime(now);
+    } else {
+      // Check if rate limit exceeded
+      if (messageCount >= MESSAGE_RATE_LIMIT) {
+        console.log('Rate limit exceeded: Too many messages sent');
+        setRateLimitCooldown(true);
+
+        // Remove cooldown after timeout
+        setTimeout(() => {
+          setRateLimitCooldown(false);
+          setMessageCount(0);
+        }, RATE_LIMIT_COOLDOWN);
+
+        return;
+      }
+
+      setMessageCount(prev => prev + 1);
+    }
+
+    // Send the message
+    console.log('Sending message:', messageToSend);
+    setCurrentMessage('');
+    setIsKeyboardVisible(false);
   };
 
   const handleEnterKey = () => {
     handleSendMessage();
+  };
+
+  // Handle system keyboard message changes
+  const handleMessageChange = (text: string) => {
+    // Enforce 50 character limit
+    if (text.length <= 50) {
+      setCurrentMessage(text);
+    }
   };
 
   // Handle exit game
@@ -358,8 +421,10 @@ const DrawingBattleScreen = () => {
           <MessageInput
             position="top"
             message={currentMessage}
+            isRateLimited={rateLimitCooldown}
             onSendMessage={handleSendMessage}
             onShowKeyboard={handleShowKeyboard}
+            onMessageChange={handleMessageChange}
           />
         )}
 
@@ -371,22 +436,26 @@ const DrawingBattleScreen = () => {
           <MessageInput
             position="bottom"
             message={currentMessage}
+            isRateLimited={rateLimitCooldown}
             onSendMessage={handleSendMessage}
             onShowKeyboard={handleShowKeyboard}
+            onMessageChange={handleMessageChange}
           />
         )}
       </View>
 
-      {/* Virtual Keyboard */}
-      <VirtualKeyboard
-        visible={isKeyboardVisible}
-        currentMessage={currentMessage}
-        onKeyPress={handleKeyPress}
-        onBackspace={handleBackspace}
-        onSpace={handleSpace}
-        onEnter={handleEnterKey}
-        onHide={handleHideKeyboard}
-      />
+      {/* Virtual Keyboard - only show when system keyboard is NOT enabled */}
+      {!useSystemKeyboard && (
+        <VirtualKeyboard
+          visible={isKeyboardVisible}
+          currentMessage={currentMessage}
+          onKeyPress={handleKeyPress}
+          onBackspace={handleBackspace}
+          onSpace={handleSpace}
+          onEnter={handleEnterKey}
+          onHide={handleHideKeyboard}
+        />
+      )}
 
       {/* Settings Modal */}
       <SettingsModal

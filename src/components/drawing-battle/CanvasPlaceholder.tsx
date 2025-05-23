@@ -370,12 +370,12 @@ const HTML_CONTENT = `
         });
       }
 
-      // Custom flood fill algorithm for drawing app paint bucket tool
+      // Enhanced flood fill algorithm with tolerance for anti-aliased edges
       function floodFill(clickX, clickY, targetColor) {
-        // Handle high-DPI displays by converting coordinates
+        // Handle high-DPI displays by converting coordinates with better precision
         const deviceRatio = window.devicePixelRatio || 1;
-        const actualX = Math.floor(clickX * deviceRatio);
-        const actualY = Math.floor(clickY * deviceRatio);
+        const actualX = Math.round(clickX * deviceRatio);
+        const actualY = Math.round(clickY * deviceRatio);
 
         // Get current canvas pixel data
         const canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -392,6 +392,7 @@ const HTML_CONTENT = `
         const originalRed = canvasData.data[initialPos];
         const originalGreen = canvasData.data[initialPos + 1];
         const originalBlue = canvasData.data[initialPos + 2];
+        const originalAlpha = canvasData.data[initialPos + 3];
 
         // Parse target fill color
         const targetRgb = hexToRgb(targetColor);
@@ -401,22 +402,34 @@ const HTML_CONTENT = `
         const newGreen = targetRgb.g;
         const newBlue = targetRgb.b;
 
-        // Skip if already the target color
-        if (originalRed === newRed && originalGreen === newGreen && originalBlue === newBlue) {
+        // Skip if already the target color (with tolerance)
+        if (colorDistance(originalRed, originalGreen, originalBlue, newRed, newGreen, newBlue) < 5) {
           return;
         }
 
-        // Helper: Check if pixel is a stroke/line (dark pixels act as boundaries)
+        // More aggressive tolerance for anti-aliased edges
+        const FILL_TOLERANCE = 35;
+        const STROKE_THRESHOLD = 60; // Brightness threshold for stroke detection
+
+        // Helper: Calculate color distance between two RGB colors
+        function colorDistance(r1, g1, b1, r2, g2, b2) {
+          return Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
+        }
+
+        // Helper: Check if pixel is a definite stroke (very conservative)
         function isStrokePixel(red, green, blue, alpha) {
-          return (red + green + blue < 100 && alpha === 255);
+          // Only consider very dark pixels as definite strokes
+          // This allows anti-aliased gray pixels to be filled
+          const brightness = (red + green + blue) / 3;
+          return brightness < STROKE_THRESHOLD && alpha > 128;
         }
 
         // Don't fill if clicking directly on a stroke
-        if (isStrokePixel(originalRed, originalGreen, originalBlue, canvasData.data[initialPos + 3])) {
+        if (isStrokePixel(originalRed, originalGreen, originalBlue, originalAlpha)) {
           return;
         }
 
-        // Helper: Check if pixel should be filled
+        // Helper: Check if pixel should be filled with tolerance
         function shouldFillPixel(position) {
           if (position < 0 || position >= canvasData.data.length - 3) return false;
 
@@ -430,19 +443,16 @@ const HTML_CONTENT = `
             return false;
           }
 
-          // Fill if matches original color
-          if (red === originalRed && green === originalGreen && blue === originalBlue) {
+          // Fill if similar to original color (with tolerance)
+          const distanceFromOriginal = colorDistance(red, green, blue, originalRed, originalGreen, originalBlue);
+          if (distanceFromOriginal <= FILL_TOLERANCE) {
             return true;
           }
 
-          // Don't fill if already target color
-          if (red === newRed && green === newGreen && blue === newBlue) {
+          // Don't fill if already close to target color
+          const distanceFromTarget = colorDistance(red, green, blue, newRed, newGreen, newBlue);
+          if (distanceFromTarget <= FILL_TOLERANCE) {
             return false;
-          }
-
-          // Handle white/transparent areas
-          if (red === 255 && green === 255 && blue === 255) {
-            return originalRed === 255 && originalGreen === 255 && originalBlue === 255;
           }
 
           return false;
@@ -511,8 +521,65 @@ const HTML_CONTENT = `
           }
         }
 
+        // Post-processing: Fill remaining anti-aliased edge pixels
+        fillAntiAliasedEdges(canvasData, width, height, newRed, newGreen, newBlue);
+
         // Apply changes to canvas
         ctx.putImageData(canvasData, 0, 0);
+      }
+
+      // Helper function to fill remaining anti-aliased edge pixels
+      function fillAntiAliasedEdges(imageData, width, height, fillR, fillG, fillB) {
+        const data = imageData.data;
+        const EDGE_TOLERANCE = 50;
+
+        // Find pixels that are adjacent to filled areas and could be anti-aliased edges
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const pos = (y * width + x) * 4;
+            const r = data[pos];
+            const g = data[pos + 1];
+            const b = data[pos + 2];
+            const a = data[pos + 3];
+
+            // Skip if already filled or is a definite stroke
+            if ((r === fillR && g === fillG && b === fillB) ||
+                (r + g + b) / 3 < 40) {
+              continue;
+            }
+
+            // Check if this pixel is surrounded by filled pixels
+            let filledNeighbors = 0;
+            const neighbors = [
+              [-1, -1], [-1, 0], [-1, 1],
+              [0, -1],           [0, 1],
+              [1, -1],  [1, 0],  [1, 1]
+            ];
+
+            for (const [dx, dy] of neighbors) {
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nPos = (ny * width + nx) * 4;
+                const nr = data[nPos];
+                const ng = data[nPos + 1];
+                const nb = data[nPos + 2];
+
+                if (nr === fillR && ng === fillG && nb === fillB) {
+                  filledNeighbors++;
+                }
+              }
+            }
+
+            // If most neighbors are filled and this looks like an edge pixel, fill it
+            if (filledNeighbors >= 4 && (r + g + b) / 3 > 40 && (r + g + b) / 3 < 200) {
+              data[pos] = fillR;
+              data[pos + 1] = fillG;
+              data[pos + 2] = fillB;
+              data[pos + 3] = 255;
+            }
+          }
+        }
       }
 
       function hexToRgb(hex) {

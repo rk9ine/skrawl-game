@@ -44,6 +44,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const {
     chatInputPosition,
     setChatInputPosition,
+    useSystemKeyboard,
+    setUseSystemKeyboard,
     resetLayoutPreferences
   } = useLayoutStore();
 
@@ -116,10 +118,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       paddingVertical: spacing.sm, // Using theme spacing.sm (12) instead of hardcoded value
       borderRadius: borderRadius.md, // Using theme borderRadius.md (8) instead of hardcoded value
     },
+    toggleContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    toggleDescription: {
+      flex: 1,
+      marginRight: spacing.sm,
+    },
   });
 
   const handleChatInputPositionChange = (position: ChatInputPosition) => {
     setChatInputPosition(position);
+  };
+
+  const handleSystemKeyboardToggle = (value: boolean) => {
+    setUseSystemKeyboard(value);
   };
 
   return (
@@ -175,6 +191,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
 
 
+                  {/* Virtual Keyboard Toggle */}
+                  <View style={styles.settingItem}>
+                    <Text
+                      variant="body"
+                      color={theme.text}
+                    >
+                      Keyboard Type
+                    </Text>
+
+                    <View style={styles.toggleContainer}>
+                      <View style={styles.toggleDescription}>
+                        <Text
+                          variant="body"
+                          size={typography.fontSizes.sm}
+                          color={theme.textSecondary}
+                        >
+                          {useSystemKeyboard
+                            ? 'System keyboard (native)'
+                            : 'Virtual keyboard'
+                          }
+                        </Text>
+                      </View>
+                      <Switch
+                        value={useSystemKeyboard}
+                        onValueChange={handleSystemKeyboardToggle}
+                        trackColor={{
+                          false: theme.backgroundAlt,
+                          true: theme.primary + '40'
+                        }}
+                        thumbColor={useSystemKeyboard ? theme.primary : theme.textDisabled}
+                        ios_backgroundColor={theme.backgroundAlt}
+                      />
+                    </View>
+                  </View>
+
                   {/* Chat Input Position */}
                   <View style={styles.settingItem}>
                     <Text
@@ -185,25 +236,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </Text>
 
                     <View style={styles.optionsContainer}>
-                      <TouchableOpacity
-                        style={[
-                          styles.optionButton,
-                          chatInputPosition === 'top' && {
-                            backgroundColor: theme.primary + '20',
-                            borderColor: theme.primary,
-                          }
-                        ]}
-                        onPress={() => handleChatInputPositionChange('top')}
-                      >
-                        <Text
-                          variant="body"
-                          size={typography.fontSizes.sm}
-                          color={chatInputPosition === 'top' ? theme.primary : theme.text}
-                        >
-                          Top
-                        </Text>
-                      </TouchableOpacity>
-
                       <TouchableOpacity
                         style={[
                           styles.optionButton,
@@ -220,6 +252,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           color={chatInputPosition === 'bottom' ? theme.primary : theme.text}
                         >
                           Bottom
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.optionButton,
+                          chatInputPosition === 'top' && {
+                            backgroundColor: theme.primary + '20',
+                            borderColor: theme.primary,
+                          }
+                        ]}
+                        onPress={() => handleChatInputPositionChange('top')}
+                      >
+                        <Text
+                          variant="body"
+                          size={typography.fontSizes.sm}
+                          color={chatInputPosition === 'top' ? theme.primary : theme.text}
+                        >
+                          Top
                         </Text>
                       </TouchableOpacity>
                     </View>

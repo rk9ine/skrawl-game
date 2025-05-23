@@ -69,45 +69,67 @@ const ChatSection: React.FC<ChatSectionProps> = ({
       paddingHorizontal: spacing.xs, // Increased padding
       paddingVertical: spacing.xs / 2, // Increased padding
     },
-    messageSender: {
-      marginBottom: spacing.xxs / 2, // Using theme spacing.xxs (4) / 2 instead of hardcoded 2
-    },
     messageText: {
       flexWrap: 'wrap',
     },
   });
 
-  const renderMessageItem = ({ item }: { item: typeof messages[0] }) => (
-    <View
-      style={[
-        styles.messageItem,
-        {
-          backgroundColor: item.isSystem ? theme.backgroundAlt : 'transparent',
-        }
-      ]}
-    >
-      {!item.isSystem && (
-        <Text
-          variant="body"
-          size={typography.fontSizes.xs}
-          color={theme.primary}
-          bold
-          style={styles.messageSender}
-        >
-          {item.sender}
-        </Text>
-      )}
+  const renderMessageItem = ({ item, index }: { item: typeof messages[0], index: number }) => {
+    // Alternating background for player messages: Player 1 & 3 have background, Player 2 & 4 don't
+    // Extract player number from sender name (e.g., "Player 1" -> 1)
+    const playerNumber = item.sender.match(/Player (\d+)/)?.[1];
+    const hasBackground = playerNumber ? parseInt(playerNumber) % 2 === 1 : false;
 
-      <Text
-        variant="body"
-        size={typography.fontSizes.sm}
-        color={item.isSystem ? theme.textSecondary : theme.text}
-        style={styles.messageText}
+    return (
+      <View
+        style={[
+          styles.messageItem,
+          {
+            backgroundColor: item.isSystem
+              ? theme.backgroundAlt
+              : hasBackground
+                ? theme.backgroundAlt
+                : 'transparent',
+          }
+        ]}
       >
-        {item.text}
-      </Text>
-    </View>
-  );
+        {item.isSystem ? (
+          // System messages display as before
+          <Text
+            variant="body"
+            size={typography.fontSizes.sm}
+            color={theme.textSecondary}
+            style={styles.messageText}
+          >
+            {item.text}
+          </Text>
+        ) : (
+          // Player messages in one line: "Player 2 Hello Everyone"
+          <Text
+            variant="body"
+            size={typography.fontSizes.sm}
+            style={styles.messageText}
+          >
+            <Text
+              variant="body"
+              size={typography.fontSizes.sm}
+              color={theme.primary}
+              bold
+            >
+              {item.sender}
+            </Text>
+            <Text
+              variant="body"
+              size={typography.fontSizes.sm}
+              color={theme.text}
+            >
+              {' '}{item.text}
+            </Text>
+          </Text>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View
@@ -134,7 +156,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({
 
       <FlatList
         data={messages}
-        renderItem={renderMessageItem}
+        renderItem={({ item, index }) => renderMessageItem({ item, index })}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: spacing.xs }}

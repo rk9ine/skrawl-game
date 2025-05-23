@@ -346,14 +346,14 @@ const HTML5CanvasTestScreen: React.FC = () => {
 
 
 
-        // ===== FLOOD FILL =====
+        // ===== ENHANCED FLOOD FILL WITH ANTI-ALIASING SUPPORT =====
         function floodFill(startX, startY, fillColor) {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imageData.data;
           const width = canvas.width;
           const height = canvas.height;
 
-          const startPos = (Math.floor(startY) * width + Math.floor(startX)) * 4;
+          const startPos = (Math.round(startY) * width + Math.round(startX)) * 4;
           const startR = data[startPos];
           const startG = data[startPos + 1];
           const startB = data[startPos + 2];
@@ -363,19 +363,42 @@ const HTML5CanvasTestScreen: React.FC = () => {
           const fillRGB = hexToRgb(fillColor);
           if (!fillRGB) return;
 
-          // Check if we're trying to fill with the same color
-          if (startR === fillRGB.r && startG === fillRGB.g && startB === fillRGB.b && startA === 255) return;
+          // More aggressive tolerance for anti-aliased edges
+          const FILL_TOLERANCE = 35;
+          const STROKE_THRESHOLD = 60; // Brightness threshold for stroke detection
+
+          // Helper: Calculate color distance between two RGB colors
+          function colorDistance(r1, g1, b1, r2, g2, b2) {
+            return Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
+          }
+
+          // Check if we're trying to fill with the same color (with tolerance)
+          if (colorDistance(startR, startG, startB, fillRGB.r, fillRGB.g, fillRGB.b) < 5) return;
+
+          // Helper: Check if pixel is a definite stroke (very conservative)
+          function isStrokePixel(red, green, blue, alpha) {
+            // Only consider very dark pixels as definite strokes
+            // This allows anti-aliased gray pixels to be filled
+            const brightness = (red + green + blue) / 3;
+            return brightness < STROKE_THRESHOLD && alpha > 128;
+          }
+
+          // Don't fill if clicking directly on a stroke
+          if (isStrokePixel(startR, startG, startB, startA)) {
+            console.log('Clicked on stroke pixel, aborting fill');
+            return;
+          }
 
           console.log('Flood fill starting at:', { x: startX, y: startY });
           console.log('Start pixel color:', { r: startR, g: startG, b: startB, a: startA });
           console.log('Fill color:', fillRGB);
 
-          // Enhanced flood fill algorithm that works with transparent canvas
-          const stack = [[Math.floor(startX), Math.floor(startY)]];
+          // Enhanced flood fill algorithm with tolerance
+          const stack = [[Math.round(startX), Math.round(startY)]];
           const visited = new Set();
           let filledPixels = 0;
 
-          // Function to check if a pixel should be filled
+          // Function to check if a pixel should be filled with tolerance
           function shouldFill(x, y) {
             if (x < 0 || x >= width || y < 0 || y >= height) return false;
 
@@ -385,11 +408,24 @@ const HTML5CanvasTestScreen: React.FC = () => {
             const b = data[pos + 2];
             const a = data[pos + 3];
 
-            // Fill pixels that match the starting pixel color exactly
-            // This handles both transparent areas (a=0) and colored areas
-            const matches = (r === startR && g === startG && b === startB && a === startA);
+            // Stop at stroke boundaries
+            if (isStrokePixel(r, g, b, a)) {
+              return false;
+            }
 
-            return matches;
+            // Fill if similar to original color (with tolerance)
+            const distanceFromOriginal = colorDistance(r, g, b, startR, startG, startB);
+            if (distanceFromOriginal <= FILL_TOLERANCE) {
+              return true;
+            }
+
+            // Don't fill if already close to target color
+            const distanceFromTarget = colorDistance(r, g, b, fillRGB.r, fillRGB.g, fillRGB.b);
+            if (distanceFromTarget <= FILL_TOLERANCE) {
+              return false;
+            }
+
+            return false;
           }
 
           while (stack.length > 0) {
@@ -413,7 +449,62 @@ const HTML5CanvasTestScreen: React.FC = () => {
           }
 
           console.log('Filled pixels:', filledPixels);
+
+          // Post-processing: Fill remaining anti-aliased edge pixels
+          fillAntiAliasedEdges(data, width, height, fillRGB.r, fillRGB.g, fillRGB.b);
+
           ctx.putImageData(imageData, 0, 0);
+        }
+
+        // Helper function to fill remaining anti-aliased edge pixels
+        function fillAntiAliasedEdges(data, width, height, fillR, fillG, fillB) {
+          // Find pixels that are adjacent to filled areas and could be anti-aliased edges
+          for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+              const pos = (y * width + x) * 4;
+              const r = data[pos];
+              const g = data[pos + 1];
+              const b = data[pos + 2];
+              const a = data[pos + 3];
+
+              // Skip if already filled or is a definite stroke
+              if ((r === fillR && g === fillG && b === fillB) ||
+                  (r + g + b) / 3 < 40) {
+                continue;
+              }
+
+              // Check if this pixel is surrounded by filled pixels
+              let filledNeighbors = 0;
+              const neighbors = [
+                [-1, -1], [-1, 0], [-1, 1],
+                [0, -1],           [0, 1],
+                [1, -1],  [1, 0],  [1, 1]
+              ];
+
+              for (const [dx, dy] of neighbors) {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                  const nPos = (ny * width + nx) * 4;
+                  const nr = data[nPos];
+                  const ng = data[nPos + 1];
+                  const nb = data[nPos + 2];
+
+                  if (nr === fillR && ng === fillG && nb === fillB) {
+                    filledNeighbors++;
+                  }
+                }
+              }
+
+              // If most neighbors are filled and this looks like an edge pixel, fill it
+              if (filledNeighbors >= 4 && (r + g + b) / 3 > 40 && (r + g + b) / 3 < 200) {
+                data[pos] = fillR;
+                data[pos + 1] = fillG;
+                data[pos + 2] = fillB;
+                data[pos + 3] = 255;
+              }
+            }
+          }
         }
 
         function hexToRgb(hex) {
