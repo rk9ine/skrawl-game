@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,11 +12,12 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useAuthStore } from '../../store/authStore';
 import {
-  CanvasPlaceholder,
+  DrawingCanvas,
   DrawingToolbar,
   PlayerList,
   ChatSection,
   MessageInput,
+  VirtualKeyboard,
   TopBar,
   SettingsModal,
 } from '../../components/drawing-battle';
@@ -31,7 +32,6 @@ const DrawingBattleScreen = () => {
   const styles = StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: '#FFFFFF', // Will be overridden by theme.background
     },
     statusBarSpacer: {
       height: Platform.OS === 'android' ? 0 : 0, // Adjust if needed for consistency
@@ -106,6 +106,16 @@ const DrawingBattleScreen = () => {
   const [isLandscape, setIsLandscape] = useState(
     Dimensions.get('window').width > Dimensions.get('window').height
   );
+
+  // Drawing state (skribbl.io defaults)
+  const [currentTool, setCurrentTool] = useState<'pen' | 'bucket'>('pen');
+  const [currentColor, setCurrentColor] = useState('#000000'); // Black - skribbl.io default
+  const [currentSize, setCurrentSize] = useState(5); // 5px - skribbl.io default
+  const canvasRef = useRef<{ undo: () => void; clear: () => void }>(null);
+
+  // Virtual keyboard state
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // Generate custom player data with current user's profile
   const getCustomPlayerData = useCallback(() => {
@@ -237,6 +247,66 @@ const DrawingBattleScreen = () => {
 
 
 
+  // Drawing tool handlers
+  const handleToolSelect = (tool: 'pen' | 'bucket') => {
+    setCurrentTool(tool);
+  };
+
+  const handleColorSelect = (color: string) => {
+    setCurrentColor(color);
+  };
+
+  const handleSizeSelect = (size: number) => {
+    setCurrentSize(size);
+  };
+
+  const handleUndo = () => {
+    if (canvasRef.current && canvasRef.current.undo) {
+      canvasRef.current.undo();
+    }
+  };
+
+  const handleClear = () => {
+    if (canvasRef.current && canvasRef.current.clear) {
+      canvasRef.current.clear();
+    }
+  };
+
+  // Virtual keyboard handlers
+  const handleShowKeyboard = () => {
+    setIsKeyboardVisible(true);
+  };
+
+  const handleHideKeyboard = () => {
+    setIsKeyboardVisible(false);
+  };
+
+  const handleKeyPress = (key: string) => {
+    setCurrentMessage(prev => prev + key);
+  };
+
+  const handleBackspace = () => {
+    setCurrentMessage(prev => prev.slice(0, -1));
+  };
+
+  const handleSpace = () => {
+    setCurrentMessage(prev => prev + ' ');
+  };
+
+  const handleSendMessage = (message?: string) => {
+    const messageToSend = message || currentMessage;
+    if (messageToSend.trim()) {
+      // TODO: Send message to chat/game logic
+      console.log('Sending message:', messageToSend);
+      setCurrentMessage('');
+      setIsKeyboardVisible(false);
+    }
+  };
+
+  const handleEnterKey = () => {
+    handleSendMessage();
+  };
+
   // Handle exit game
   const onExit = () => {
     navigation.goBack();
@@ -258,19 +328,39 @@ const DrawingBattleScreen = () => {
 
       {/* Main Content */}
       <View style={styles.content}>
-        {/* Canvas Placeholder - edge-to-edge */}
+        {/* Drawing Canvas - edge-to-edge */}
         <View style={styles.canvasContainer}>
-          <CanvasPlaceholder />
+          <DrawingCanvas
+            ref={canvasRef}
+            currentTool={currentTool}
+            currentColor={currentColor}
+            currentSize={currentSize}
+            onUndo={handleUndo}
+            onClear={handleClear}
+          />
         </View>
 
-        {/* Drawing Toolbar - visual only */}
+        {/* Drawing Toolbar - fully functional */}
         <DrawingToolbar
+          currentTool={currentTool}
+          currentColor={currentColor}
+          currentSize={currentSize}
+          onToolSelect={handleToolSelect}
+          onColorSelect={handleColorSelect}
+          onSizeSelect={handleSizeSelect}
+          onUndo={handleUndo}
+          onClear={handleClear}
           onOpenSettings={() => setIsSettingsModalVisible(true)}
         />
 
         {/* Message Input - conditionally positioned at top */}
         {chatInputPosition === 'top' && (
-          <MessageInput position="top" />
+          <MessageInput
+            position="top"
+            message={currentMessage}
+            onSendMessage={handleSendMessage}
+            onShowKeyboard={handleShowKeyboard}
+          />
         )}
 
         {/* Player List and Chat Section */}
@@ -278,9 +368,25 @@ const DrawingBattleScreen = () => {
 
         {/* Message Input - conditionally positioned at bottom */}
         {chatInputPosition === 'bottom' && (
-          <MessageInput position="bottom" />
+          <MessageInput
+            position="bottom"
+            message={currentMessage}
+            onSendMessage={handleSendMessage}
+            onShowKeyboard={handleShowKeyboard}
+          />
         )}
       </View>
+
+      {/* Virtual Keyboard */}
+      <VirtualKeyboard
+        visible={isKeyboardVisible}
+        currentMessage={currentMessage}
+        onKeyPress={handleKeyPress}
+        onBackspace={handleBackspace}
+        onSpace={handleSpace}
+        onEnter={handleEnterKey}
+        onHide={handleHideKeyboard}
+      />
 
       {/* Settings Modal */}
       <SettingsModal

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
-import { applyThemeShadow } from '../../utils/styleUtils';
 import { ChatInputPosition } from '../../store/layoutStore';
+import { Text } from '../ui/Text';
 
 interface MessageInputProps {
   /**
@@ -12,20 +12,31 @@ interface MessageInputProps {
   position: ChatInputPosition;
 
   /**
+   * Current message being typed
+   */
+  message: string;
+
+  /**
    * Callback when a message is sent
    */
   onSendMessage?: (message: string) => void;
+
+  /**
+   * Callback to show virtual keyboard
+   */
+  onShowKeyboard?: () => void;
 }
 
 /**
- * Component for inputting and sending chat messages
+ * Component for displaying current message and send button (skribbl.io style)
  */
 const MessageInput: React.FC<MessageInputProps> = ({
   position,
+  message,
   onSendMessage,
+  onShowKeyboard,
 }) => {
   const { theme, spacing, borderRadius, typography } = useTheme();
-  const [message, setMessage] = useState('');
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -47,13 +58,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: spacing.xxs, // Minimal horizontal padding
-      paddingVertical: Platform.OS === 'ios' ? spacing.xxs / 2 : 0, // Minimal vertical padding
+      paddingVertical: spacing.xxs / 2, // Minimal vertical padding
     },
-    input: {
+    messageDisplay: {
       flex: 1,
-      height: Platform.OS === 'ios' ? spacing.md + spacing.xxs : spacing.md + spacing.xxs, // Reduced height
-      paddingVertical: 0,
-      fontSize: typography.fontSizes.sm, // Using theme typography
+      height: spacing.md + spacing.xxs, // Consistent height
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xs,
+      minHeight: 32,
+    },
+    messageText: {
+      fontSize: typography.fontSizes.sm,
+    },
+    placeholderText: {
+      fontSize: typography.fontSizes.sm,
     },
     sendButton: {
       width: spacing.md + spacing.xxs, // Reduced size
@@ -67,8 +85,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const handleSendMessage = () => {
     if (message.trim()) {
       onSendMessage?.(message.trim());
-      setMessage('');
     }
+  };
+
+  const handleMessageDisplayPress = () => {
+    onShowKeyboard?.();
   };
 
   return (
@@ -93,15 +114,31 @@ const MessageInput: React.FC<MessageInputProps> = ({
           }
         ]}
       >
-        <TextInput
-          style={[styles.input, { color: theme.text }]}
-          placeholder="Type a message..."
-          placeholderTextColor={theme.textDisabled}
-          value={message}
-          onChangeText={setMessage}
-          returnKeyType="send"
-          onSubmitEditing={handleSendMessage}
-        />
+        <TouchableOpacity
+          style={styles.messageDisplay}
+          onPress={handleMessageDisplayPress}
+          activeOpacity={0.7}
+        >
+          {message ? (
+            <Text
+              variant="body"
+              size={typography.fontSizes.sm}
+              color={theme.text}
+              style={styles.messageText}
+            >
+              {message}
+            </Text>
+          ) : (
+            <Text
+              variant="body"
+              size={typography.fontSizes.sm}
+              color={theme.textDisabled}
+              style={styles.placeholderText}
+            >
+              Type a message...
+            </Text>
+          )}
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[

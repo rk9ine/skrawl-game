@@ -1,1080 +1,874 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  useWindowDimensions,
-  Platform,
-  Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+﻿import React, { useRef, useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../../theme/ThemeContext';
-import { Text, SafeAreaContainer } from '../../components/ui';
-import { applyThemeShadow } from '../../utils/styleUtils';
 
-/**
- * HTML5 Canvas Test Screen
- * Implements a high-performance drawing canvas using HTML5 Canvas in a WebView
- */
-const HTML5CanvasTestScreen = () => {
-  const { theme, typography, spacing, borderRadius } = useTheme();
-  const navigation = useNavigation();
-  const { width, height } = useWindowDimensions();
+const HTML5CanvasTestScreen: React.FC = () => {
+  const { theme, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
+  const [webViewKey, setWebViewKey] = useState(0);
 
-  // State for selected tool and color
-  const [currentTool, setCurrentTool] = useState<'pen' | 'eraser' | 'bucket'>('pen');
-  const [currentColor, setCurrentColor] = useState('#4361EE');
-  const [brushSize, setBrushSize] = useState(5);
-  const [canvasHeight, setCanvasHeight] = useState(height * 0.7);
+  // Force WebView to reload when theme changes
+  useEffect(() => {
+    setWebViewKey(prev => prev + 1);
+  }, [isDark]);
 
-  // HTML content for the WebView with embedded canvas
+  // Debug logging
+  console.log('HTML5CanvasTestScreen - Current theme:', {
+    isDark,
+    canvasBackground: theme.canvasBackground,
+    surface: theme.surface,
+    text: theme.text
+  });
+
+  // Optimized HTML5 Canvas for skribbl.io-style drawing
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <title>HTML5 Canvas Drawing</title>
+      <title>Optimized HTML5 Canvas Drawing</title>
       <style>
         body {
           margin: 0;
           padding: 0;
           overflow: hidden;
           touch-action: none;
-          background-color: ${theme.canvasBackground};
+          background-color: #FFFFFF;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          height: 100vh;
+          height: 100dvh; /* Dynamic viewport height for mobile */
         }
+
         #canvas {
           display: block;
-          width: 100%;
+          width: 100vw;
           height: 100vh;
+          height: 100dvh; /* Dynamic viewport height for mobile */
           touch-action: none;
-        }
-        #tempCanvas {
-          position: absolute;
+          cursor: crosshair;
+          position: fixed;
           top: 0;
           left: 0;
-          pointer-events: none;
           z-index: 1;
+        }
+
+        #toolbar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: ${theme.surface};
+          border-top: 1px solid ${theme.border};
+          padding: 8px;
+          padding-bottom: max(8px, env(safe-area-inset-bottom));
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          z-index: 1000;
+          box-sizing: border-box;
+        }
+
+        .tool-btn {
+          width: 40px;
+          height: 40px;
+          border: none;
+          border-radius: 8px;
+          background: ${theme.backgroundAlt};
+          color: ${theme.text};
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+          background: ${theme.primary};
+          color: white;
+        }
+
+        .tool-btn.active {
+          background: ${theme.primary};
+          color: white;
+        }
+
+        .color-btn {
+          width: 30px;
+          height: 30px;
+          border: 2px solid ${theme.border};
+          border-radius: 6px;
+          cursor: pointer;
+          margin: 0 2px;
+        }
+
+        .color-btn.active {
+          border-color: ${theme.primary};
+          border-width: 3px;
+        }
+
+        .size-btn {
+          width: 35px;
+          height: 35px;
+          border: 1px solid ${theme.border};
+          border-radius: 6px;
+          background: ${theme.backgroundAlt};
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 2px;
+        }
+
+        .size-btn.active {
+          background: ${theme.primary};
+          border-color: ${theme.primary};
+        }
+
+        .size-preview {
+          background: ${theme.text};
+          border-radius: 50%;
+        }
+
+        #colorPalette, #sizePalette {
+          position: fixed;
+          bottom: calc(60px + env(safe-area-inset-bottom));
+          left: 50%;
+          transform: translateX(-50%);
+          background: ${theme.surface};
+          border: 1px solid ${theme.border};
+          border-radius: 12px;
+          padding: 8px;
+          display: none;
+          flex-wrap: wrap;
+          max-width: 300px;
+          z-index: 1001;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          box-sizing: border-box;
+        }
+
+        #performance {
+          position: fixed;
+          top: max(10px, env(safe-area-inset-top));
+          right: max(10px, env(safe-area-inset-right));
+          background: rgba(0,0,0,0.7);
+          color: white;
+          padding: 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          z-index: 1002;
+          box-sizing: border-box;
         }
       </style>
     </head>
     <body>
       <canvas id="canvas"></canvas>
-      <canvas id="tempCanvas"></canvas>
+
+      <!-- Performance Monitor -->
+      <div id="performance">
+        FPS: <span id="fps">0</span> |
+        Strokes: <span id="strokeCount">0</span> |
+        Points: <span id="pointCount">0</span>
+      </div>
+
+      <!-- Drawing Toolbar - Standard skribbl.io Layout -->
+      <div id="toolbar">
+        <button class="tool-btn active" id="penTool" title="Pen">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+        </button>
+        <button class="tool-btn" id="bucketTool" title="Paint Bucket">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/>
+            <path d="m5 2 5 5"/>
+            <path d="M2 13h15"/>
+            <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/>
+          </svg>
+        </button>
+        <button class="tool-btn" id="colorTool" title="Colors">
+          <div class="color-preview" style="width: 20px; height: 20px; border-radius: 4px; border: 2px solid currentColor;"></div>
+        </button>
+        <button class="tool-btn" id="sizeTool" title="Brush Size">
+          <div class="size-preview" style="width: 12px; height: 12px; border-radius: 50%; background: currentColor;"></div>
+        </button>
+        <button class="tool-btn" id="undoTool" title="Undo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7v6h6"/>
+            <path d="m21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+        </button>
+        <button class="tool-btn" id="clearTool" title="Clear">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Color Palette -->
+      <div id="colorPalette"></div>
+
+      <!-- Size Palette -->
+      <div id="sizePalette"></div>
+
       <script>
-        // Canvas setup - main canvas for persistent drawing
+        // Debug theme values
+        console.log('WebView HTML - Theme values:', {
+          canvasBackground: '${theme.canvasBackground}',
+          surface: '${theme.surface}',
+          text: '${theme.text}',
+          isDark: ${isDark}
+        });
+
+        // ===== CANVAS SETUP =====
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
+        const ctx = canvas.getContext('2d', {
+          alpha: true, // Enable alpha for transparent background
+          desynchronized: true,
+          willReadFrequently: false
+        });
 
-        // Temporary canvas for real-time drawing (better performance)
-        const tempCanvas = document.getElementById('tempCanvas');
-        const tempCtx = tempCanvas.getContext('2d', { alpha: true });
+        // Performance monitoring
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 0;
 
-        // Drawing state
+        // ===== DRAWING STATE =====
         let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let lastTimestamp = 0;
         let currentTool = 'pen';
-        let currentColor = '${currentColor}';
-        let brushSize = ${brushSize};
-
-        // Path management for undo/redo and multiplayer
-        let paths = [];
-        let currentPath = [];
+        let currentColor = '#4361EE';
+        let currentSize = 5;
+        let points = [];
+        let strokes = [];
         let undoStack = [];
-        let pathId = 0;
-        let userId = 'local-user';
 
         // Performance optimization
-        const THROTTLE_RATE = 16; // ~60fps
-        let animationFrameId = null;
-        let pointsBuffer = [];
+        let animationId = null;
+        let needsRedraw = false;
+        let redrawScheduled = false;
 
-        // Set canvas size to match the viewport with proper pixel ratio
+        // ===== COLORS AND SIZES =====
+        const colors = [
+          '#FF0000', '#FF4500', '#FF8C00', '#FFD700', '#ADFF2F',
+          '#00FF00', '#00CED1', '#1E90FF', '#4169E1', '#8A2BE2',
+          '#FF1493', '#FF69B4', '#8B4513', '#D2691E', '#32CD32',
+          '#008080', '#4682B4', '#9370DB', '#000000', '#FFFFFF'
+        ];
+
+        const sizes = [2, 5, 10, 15, 20, 30];
+
+        // ===== CANVAS UTILITIES =====
         function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
           const dpr = window.devicePixelRatio || 1;
-          const width = window.innerWidth;
-          const height = window.innerHeight;
 
-          // Set main canvas size
-          canvas.width = width * dpr;
-          canvas.height = height * dpr;
-          canvas.style.width = width + 'px';
-          canvas.style.height = height + 'px';
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+
           ctx.scale(dpr, dpr);
+          canvas.style.width = rect.width + 'px';
+          canvas.style.height = rect.height + 'px';
 
-          // Set temp canvas size
-          tempCanvas.width = width * dpr;
-          tempCanvas.height = height * dpr;
-          tempCanvas.style.width = width + 'px';
-          tempCanvas.style.height = height + 'px';
-          tempCtx.scale(dpr, dpr);
+          // Set drawing properties
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
 
-          // Set background color
-          ctx.fillStyle = '${theme.canvasBackground}';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          // Redraw all paths after resize
           redrawCanvas();
         }
 
-        // Initialize canvas
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        function getCanvasPoint(e) {
+          const rect = canvas.getBoundingClientRect();
+          const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+          const clientY = e.clientY || (e.touches && e.touches[0].clientY);
 
-        // Drawing functions
-        function startDrawing(e) {
-          isDrawing = true;
-
-          // Get touch/mouse position
-          const pos = getPosition(e);
-          lastX = pos.x;
-          lastY = pos.y;
-          lastTimestamp = Date.now();
-
-          // Clear the temporary canvas
-          clearTempCanvas();
-
-          // Start a new path with unique ID
-          pathId = Date.now();
-          currentPath = [{
-            x: lastX,
-            y: lastY,
-            time: lastTimestamp,
-            pressure: getPressure(e),
-            tool: currentTool,
-            color: currentColor,
-            size: brushSize
-          }];
-
-          // If using bucket tool, fill area
-          if (currentTool === 'bucket') {
-            floodFill(lastX, lastY, currentColor);
-            finishDrawing();
-          }
-
-          // Prevent default behavior
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-
-        function draw(e) {
-          if (!isDrawing || currentTool === 'bucket') return;
-
-          // Get current position and timestamp
-          const pos = getPosition(e);
-          const now = Date.now();
-
-          // Skip if points are too close together (time-based throttling)
-          if (now - lastTimestamp < THROTTLE_RATE) {
-            // Add to buffer for later processing
-            pointsBuffer.push({
-              x: pos.x,
-              y: pos.y,
-              time: now,
-              pressure: getPressure(e)
-            });
-
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-          }
-
-          // Process any buffered points
-          if (pointsBuffer.length > 0) {
-            // Use the most recent buffered point
-            const bufferPoint = pointsBuffer[pointsBuffer.length - 1];
-            drawPoint(bufferPoint.x, bufferPoint.y, bufferPoint.pressure);
-            pointsBuffer = [];
-          }
-
-          // Draw the current point
-          drawPoint(pos.x, pos.y, getPressure(e));
-
-          // Update timestamp
-          lastTimestamp = now;
-
-          // Prevent default behavior
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-
-        function drawPoint(x, y, pressure = 1.0) {
-          // Calculate distance for line smoothing
-          const dx = x - lastX;
-          const dy = y - lastY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          // Skip if the point is too close (reduces jitter)
-          if (distance < 0.5) return;
-
-          // Clear the temporary canvas
-          clearTempCanvas();
-
-          // Draw on both canvases
-          [tempCtx, ctx].forEach(context => {
-            // Set drawing styles
-            context.beginPath();
-            context.lineJoin = 'round';
-            context.lineCap = 'round';
-
-            // Adjust brush size based on pressure if available
-            const adjustedSize = Math.max(1, brushSize * pressure);
-            context.lineWidth = adjustedSize;
-
-            // Set color and composite operation based on tool
-            if (currentTool === 'pen') {
-              context.strokeStyle = currentColor;
-              context.globalCompositeOperation = 'source-over';
-            } else if (currentTool === 'eraser') {
-              context.strokeStyle = '${theme.canvasBackground}';
-              context.globalCompositeOperation = 'destination-out';
-            }
-
-            // Use quadratic curves for smoother lines when distance is appropriate
-            if (distance > 2 && currentPath.length > 1) {
-              // Get the last two points for curve calculation
-              const lastPoint = currentPath[currentPath.length - 1];
-              const controlX = lastX;
-              const controlY = lastY;
-
-              // Draw a quadratic curve
-              context.moveTo(lastPoint.x, lastPoint.y);
-              context.quadraticCurveTo(controlX, controlY, x, y);
-            } else {
-              // For short distances, just draw a line
-              context.moveTo(lastX, lastY);
-              context.lineTo(x, y);
-            }
-
-            context.stroke();
-          });
-
-          // Add point to current path
-          currentPath.push({
-            x: x,
-            y: y,
-            time: Date.now(),
-            pressure: pressure,
-            tool: currentTool,
-            color: currentColor,
-            size: brushSize
-          });
-
-          // Update last position
-          lastX = x;
-          lastY = y;
-        }
-
-        function clearTempCanvas() {
-          tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        }
-
-        function finishDrawing() {
-          if (!isDrawing) return;
-          isDrawing = false;
-
-          // Process any remaining buffered points
-          if (pointsBuffer.length > 0) {
-            const lastPoint = pointsBuffer[pointsBuffer.length - 1];
-            drawPoint(lastPoint.x, lastPoint.y, lastPoint.pressure);
-            pointsBuffer = [];
-          }
-
-          // Clear the temporary canvas
-          clearTempCanvas();
-
-          // Add current path to paths array if it has points
-          if (currentPath.length > 1) {
-            // Create a path object with metadata
-            const pathObject = {
-              id: pathId,
-              userId: userId,
-              points: simplifyPath(currentPath),
-              tool: currentTool,
-              color: currentColor,
-              timestamp: Date.now()
-            };
-
-            paths.push(pathObject);
-            undoStack = []; // Clear redo stack when new drawing is made
-
-            // Send path to React Native for multiplayer sync
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'newPath',
-              path: pathObject,
-              count: paths.length
-            }));
-          }
-
-          currentPath = [];
-
-          // Reset composite operation
-          ctx.globalCompositeOperation = 'source-over';
-          tempCtx.globalCompositeOperation = 'source-over';
-        }
-
-        // Utility function to get position from event with better precision
-        function getPosition(e) {
-          let x, y;
-
-          if (e.touches && e.touches.length > 0) {
-            // Touch event
-            x = e.touches[0].clientX;
-            y = e.touches[0].clientY;
-          } else if (e.changedTouches && e.changedTouches.length > 0) {
-            // Touch end event
-            x = e.changedTouches[0].clientX;
-            y = e.changedTouches[0].clientY;
-          } else {
-            // Mouse event
-            x = e.clientX;
-            y = e.clientY;
-          }
-
-          // Apply device pixel ratio for better precision
-          const dpr = window.devicePixelRatio || 1;
           return {
-            x: x,
-            y: y
+            x: clientX - rect.left,
+            y: clientY - rect.top,
+            time: performance.now()
           };
         }
 
-        // Get pressure from touch/pointer event (if available)
-        function getPressure(e) {
-          // Check for Pointer events with pressure
-          if (e.pressure !== undefined && e.pressure !== 0) {
-            return e.pressure;
-          }
-
-          // Check for Touch events with force (iOS)
-          if (e.touches && e.touches[0] && e.touches[0].force !== undefined) {
-            return e.touches[0].force;
-          }
-
-          // Default pressure
-          return 1.0;
-        }
-
-        // Simplify path for better performance and network transmission
-        function simplifyPath(points) {
+        // ===== SMOOTH DRAWING =====
+        function smoothPath(points) {
           if (points.length < 3) return points;
 
-          const tolerance = 1.0; // Tolerance for simplification
-          const simplified = [points[0]];
-          let prevPoint = points[0];
+          // First, reduce points by removing ones that are too close together
+          const reducedPoints = reducePoints(points);
 
-          for (let i = 1; i < points.length - 1; i++) {
-            const point = points[i];
-            const nextPoint = points[i + 1];
+          if (reducedPoints.length < 3) return reducedPoints;
 
-            // Calculate distance between current point and line formed by prev and next
-            const dx1 = nextPoint.x - prevPoint.x;
-            const dy1 = nextPoint.y - prevPoint.y;
-            const dx2 = point.x - prevPoint.x;
-            const dy2 = point.y - prevPoint.y;
+          const smoothed = [reducedPoints[0]];
 
-            // Cross product to find perpendicular distance
-            const area = Math.abs(dx1 * dy2 - dx2 * dy1);
-            const length = Math.sqrt(dx1 * dx1 + dy1 * dy1);
-            const distance = area / length;
+          for (let i = 1; i < reducedPoints.length - 1; i++) {
+            const prev = reducedPoints[i - 1];
+            const curr = reducedPoints[i];
+            const next = reducedPoints[i + 1];
 
-            // Keep point if it's far enough from the line or has pressure change
-            const pressureDiff = Math.abs(point.pressure - prevPoint.pressure);
-            if (distance > tolerance || pressureDiff > 0.1) {
-              simplified.push(point);
-              prevPoint = point;
-            }
+            // Gentler smoothing for more natural curves
+            const smoothingFactor = 0.2; // Reduced from complex calculation
+            smoothed.push({
+              x: curr.x * (1 - smoothingFactor) + (prev.x + next.x) * smoothingFactor * 0.5,
+              y: curr.y * (1 - smoothingFactor) + (prev.y + next.y) * smoothingFactor * 0.5,
+              time: curr.time
+            });
           }
 
-          // Always include the last point
-          simplified.push(points[points.length - 1]);
-
-          return simplified;
+          smoothed.push(reducedPoints[reducedPoints.length - 1]);
+          return smoothed;
         }
 
-        // Optimized flood fill algorithm (paint bucket) with scanline approach
-        function floodFill(x, y, fillColor) {
-          // Round coordinates to integers
-          x = Math.floor(x);
-          y = Math.floor(y);
+        function reducePoints(points) {
+          if (points.length < 3) return points;
 
-          // Get the color at the target position
+          const reduced = [points[0]];
+          const minDistance = 1.0; // Further reduced for maximum smoothness
+
+          for (let i = 1; i < points.length; i++) {
+            const lastPoint = reduced[reduced.length - 1];
+            const currentPoint = points[i];
+            const distance = Math.sqrt(
+              (currentPoint.x - lastPoint.x) ** 2 + (currentPoint.y - lastPoint.y) ** 2
+            );
+
+            if (distance >= minDistance || i === points.length - 1) {
+              reduced.push(currentPoint);
+            }
+          }
+
+          return reduced;
+        }
+
+
+
+        // ===== FLOOD FILL =====
+        function floodFill(startX, startY, fillColor) {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imageData.data;
-          const width = imageData.width;
-          const height = imageData.height;
+          const width = canvas.width;
+          const height = canvas.height;
 
-          // Get the index of the target pixel
-          const targetIdx = (y * width + x) * 4;
+          const startPos = (Math.floor(startY) * width + Math.floor(startX)) * 4;
+          const startR = data[startPos];
+          const startG = data[startPos + 1];
+          const startB = data[startPos + 2];
+          const startA = data[startPos + 3];
 
-          // Get the color of the target pixel
-          const targetR = data[targetIdx];
-          const targetG = data[targetIdx + 1];
-          const targetB = data[targetIdx + 2];
-          const targetA = data[targetIdx + 3];
+          // Convert fill color to RGB
+          const fillRGB = hexToRgb(fillColor);
+          if (!fillRGB) return;
 
-          // Convert fill color from hex to RGBA
-          const fillRGBA = hexToRgba(fillColor);
+          // Check if we're trying to fill with the same color
+          if (startR === fillRGB.r && startG === fillRGB.g && startB === fillRGB.b && startA === 255) return;
 
-          // Don't fill if the target color is the same as the fill color
-          if (
-            targetR === fillRGBA.r &&
-            targetG === fillRGBA.g &&
-            targetB === fillRGBA.b &&
-            targetA === 255
-          ) {
-            return;
+          console.log('Flood fill starting at:', { x: startX, y: startY });
+          console.log('Start pixel color:', { r: startR, g: startG, b: startB, a: startA });
+          console.log('Fill color:', fillRGB);
+
+          // Enhanced flood fill algorithm that works with transparent canvas
+          const stack = [[Math.floor(startX), Math.floor(startY)]];
+          const visited = new Set();
+          let filledPixels = 0;
+
+          // Function to check if a pixel should be filled
+          function shouldFill(x, y) {
+            if (x < 0 || x >= width || y < 0 || y >= height) return false;
+
+            const pos = (y * width + x) * 4;
+            const r = data[pos];
+            const g = data[pos + 1];
+            const b = data[pos + 2];
+            const a = data[pos + 3];
+
+            // Fill pixels that match the starting pixel color exactly
+            // This handles both transparent areas (a=0) and colored areas
+            const matches = (r === startR && g === startG && b === startB && a === startA);
+
+            return matches;
           }
-
-          // Function to check if a pixel matches the target color
-          function matchesTarget(idx) {
-            return (
-              data[idx] === targetR &&
-              data[idx + 1] === targetG &&
-              data[idx + 2] === targetB &&
-              data[idx + 3] === targetA
-            );
-          }
-
-          // Function to set a pixel to the fill color
-          function setFillColor(idx) {
-            data[idx] = fillRGBA.r;
-            data[idx + 1] = fillRGBA.g;
-            data[idx + 2] = fillRGBA.b;
-            data[idx + 3] = 255;
-          }
-
-          // Stack-based scanline flood fill (more efficient than simple queue)
-          const stack = [[x, y]];
 
           while (stack.length > 0) {
-            const [currX, currY] = stack.pop();
+            const [x, y] = stack.pop();
+            const key = y * width + x;
 
-            // Skip if outside canvas
-            if (currX < 0 || currX >= width || currY < 0 || currY >= height) {
-              continue;
-            }
+            if (visited.has(key) || !shouldFill(x, y)) continue;
 
-            // Find the leftmost and rightmost pixels of the scanline
-            let left = currX;
-            let right = currX;
-            const idx = (currY * width + currX) * 4;
+            visited.add(key);
+            filledPixels++;
 
-            // Skip if this pixel doesn't match the target
-            if (!matchesTarget(idx)) {
-              continue;
-            }
+            // Fill this pixel
+            const pos = (y * width + x) * 4;
+            data[pos] = fillRGB.r;
+            data[pos + 1] = fillRGB.g;
+            data[pos + 2] = fillRGB.b;
+            data[pos + 3] = 255;
 
-            // Find leftmost pixel of the scanline
-            while (left > 0 && matchesTarget((currY * width + (left - 1)) * 4)) {
-              left--;
-            }
-
-            // Find rightmost pixel of the scanline
-            while (right < width - 1 && matchesTarget((currY * width + (right + 1)) * 4)) {
-              right++;
-            }
-
-            // Fill the scanline
-            for (let i = left; i <= right; i++) {
-              const idx = (currY * width + i) * 4;
-              setFillColor(idx);
-
-              // Check pixels above and below for next scanlines
-              if (currY > 0 && matchesTarget((currY - 1) * width + i) * 4) {
-                stack.push([i, currY - 1]);
-              }
-
-              if (currY < height - 1 && matchesTarget((currY + 1) * width + i) * 4) {
-                stack.push([i, currY + 1]);
-              }
-            }
+            // Add neighbors to stack
+            stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
           }
 
-          // Update canvas with the filled area
+          console.log('Filled pixels:', filledPixels);
           ctx.putImageData(imageData, 0, 0);
         }
 
-        // Convert hex color to RGBA
-        function hexToRgba(hex) {
-          const r = parseInt(hex.slice(1, 3), 16);
-          const g = parseInt(hex.slice(3, 5), 16);
-          const b = parseInt(hex.slice(5, 7), 16);
-          return { r, g, b, a: 255 };
+        function hexToRgb(hex) {
+          const result = /^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$/i.exec(hex);
+          return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          } : null;
         }
 
-        // Clear canvas
-        function clearCanvas() {
-          ctx.fillStyle = '${theme.canvasBackground}';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          clearTempCanvas();
-          paths = [];
-          undoStack = [];
+        // ===== STATE MANAGEMENT =====
+        function saveState() {
+          // Save canvas image data for reliable undo
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          undoStack.push({
+            imageData: imageData,
+            strokes: JSON.parse(JSON.stringify(strokes))
+          });
 
-          // Notify React Native
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'clear'
-          }));
+          // Limit undo stack size for memory management
+          if (undoStack.length > 20) {
+            undoStack.shift();
+          }
         }
 
-        // Undo last path
         function undo() {
-          if (paths.length === 0) return;
+          // Standard skribbl.io behavior: Remove only the last stroke
+          if (strokes.length > 0) {
+            // Save current state before undo (for potential redo in future)
+            saveState();
 
-          // Move last path to undo stack
-          undoStack.push(paths.pop());
+            // Remove the last stroke
+            strokes.pop();
 
-          // Redraw canvas
-          redrawCanvas();
-
-          // Notify React Native
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'undo',
-            pathsCount: paths.length,
-            undoStackCount: undoStack.length
-          }));
+            // Redraw canvas without the last stroke
+            redrawCanvas();
+            updatePerformanceStats();
+          }
         }
 
-        // Redo last undone path
-        function redo() {
-          if (undoStack.length === 0) return;
 
-          // Move last undone path back to paths
-          paths.push(undoStack.pop());
 
-          // Redraw canvas
-          redrawCanvas();
+        function clearCanvas() {
+          // Save current state before clearing
+          saveState();
 
-          // Notify React Native
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'redo',
-            pathsCount: paths.length,
-            undoStackCount: undoStack.length
-          }));
+          // Clear everything
+          strokes = [];
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          updatePerformanceStats();
         }
 
-        // Redraw the entire canvas from paths (optimized for performance)
-        function redrawCanvas() {
-          // Clear canvas
-          ctx.fillStyle = '${theme.canvasBackground}';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // ===== DRAWING FUNCTIONS =====
+        function startDrawing(e) {
+          e.preventDefault();
 
-          // Redraw all paths
-          for (const path of paths) {
-            const points = path.points || path;
-            if (points.length < 2) continue;
+          if (currentTool === 'pen') {
+            isDrawing = true;
+            const point = getCanvasPoint(e);
+            points = [point];
 
-            // Get the first point
-            const firstPoint = points[0];
-            const tool = path.tool || firstPoint.tool;
-            const color = path.color || firstPoint.color;
-            const size = firstPoint.size || brushSize;
-
-            ctx.beginPath();
-            ctx.lineJoin = 'round';
+            // Set up drawing properties
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = currentSize;
             ctx.lineCap = 'round';
-            ctx.lineWidth = size;
+            ctx.lineJoin = 'round';
 
-            if (tool === 'pen') {
-              ctx.strokeStyle = color;
-              ctx.globalCompositeOperation = 'source-over';
-            } else if (tool === 'eraser') {
-              ctx.strokeStyle = '${theme.canvasBackground}';
-              ctx.globalCompositeOperation = 'destination-out';
-            }
-
-            // Start path
-            ctx.moveTo(firstPoint.x, firstPoint.y);
-
-            // Draw smooth curves for better quality
-            if (points.length > 2) {
-              // Use quadratic curves for smoother lines
-              for (let i = 1; i < points.length - 1; i++) {
-                const p1 = points[i];
-                const p2 = points[i + 1];
-
-                // Calculate control point (midpoint)
-                const cpX = (p1.x + p2.x) / 2;
-                const cpY = (p1.y + p2.y) / 2;
-
-                ctx.quadraticCurveTo(p1.x, p1.y, cpX, cpY);
-              }
-
-              // Connect to the last point
-              const lastPoint = points[points.length - 1];
-              ctx.lineTo(lastPoint.x, lastPoint.y);
-            } else {
-              // Just draw a line for simple paths
-              for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i].x, points[i].y);
-              }
-            }
-
-            ctx.stroke();
+            // Draw a small dot for single taps
+            drawDot(point.x, point.y);
+          } else if (currentTool === 'bucket') {
+            // Save state before flood fill
+            saveState();
+            const point = getCanvasPoint(e);
+            floodFill(point.x, point.y, currentColor);
           }
-
-          // Reset composite operation
-          ctx.globalCompositeOperation = 'source-over';
         }
 
-        // Handle messages from React Native
-        window.addEventListener('message', function(event) {
-          const message = JSON.parse(event.data);
+        function draw(e) {
+          if (!isDrawing || currentTool !== 'pen') return;
+          e.preventDefault();
 
-          switch (message.type) {
-            case 'setTool':
-              currentTool = message.tool;
-              break;
-            case 'setColor':
-              currentColor = message.color;
-              break;
-            case 'setBrushSize':
-              brushSize = message.size;
-              break;
-            case 'clear':
-              clearCanvas();
-              break;
-            case 'undo':
-              undo();
-              break;
-            case 'redo':
-              redo();
-              break;
-            case 'setUserId':
-              userId = message.userId;
-              break;
-            case 'addRemotePath':
-              // Add a path from another user
-              if (message.path) {
-                paths.push(message.path);
-                redrawCanvas();
-              }
-              break;
-            case 'syncPaths':
-              // Sync all paths from server
-              if (message.paths && Array.isArray(message.paths)) {
-                paths = message.paths;
-                redrawCanvas();
-              }
-              break;
+          const point = getCanvasPoint(e);
+          points.push(point);
+
+          // Draw smooth preview every few points for optimal balance of smoothness and performance
+          if (points.length % 2 === 0 && points.length > 1) {
+            drawSmoothPreview();
           }
-        });
+        }
 
-        // Optimized event handling with passive listeners where appropriate
-        // Use pointer events when available for better performance and pressure sensitivity
-        if (window.PointerEvent) {
-          // Pointer events (modern browsers)
-          canvas.addEventListener('pointerdown', startDrawing);
-          canvas.addEventListener('pointermove', draw);
-          canvas.addEventListener('pointerup', finishDrawing);
-          canvas.addEventListener('pointerout', finishDrawing);
-          canvas.addEventListener('pointercancel', finishDrawing);
+        function drawSmoothPreview() {
+          if (points.length < 2) return;
 
-          // Prevent default touch actions
-          canvas.style.touchAction = 'none';
-        } else {
-          // Mouse events (fallback)
+          // Use requestAnimationFrame for smooth performance
+          if (!redrawScheduled) {
+            redrawScheduled = true;
+            requestAnimationFrame(() => {
+              // Clear canvas and redraw all completed strokes for perfect smoothness
+              redrawCanvas();
+
+              // Draw current stroke preview with full smoothing
+              if (points.length >= 3) {
+                const smoothedPoints = smoothPath(points);
+                drawSmoothStroke(smoothedPoints, currentColor, currentSize);
+              } else if (points.length >= 2) {
+                // For just two points, draw a simple line
+                drawSmoothStroke(points, currentColor, currentSize);
+              }
+
+              redrawScheduled = false;
+            });
+          }
+        }
+
+        function stopDrawing(e) {
+          if (!isDrawing) return;
+          e.preventDefault();
+
+          isDrawing = false;
+
+          // Save state before adding new stroke (for undo functionality)
+          saveState();
+
+          if (points.length === 1) {
+            // Single tap - save as a dot stroke
+            strokes.push({
+              points: points,
+              color: currentColor,
+              size: currentSize,
+              tool: currentTool,
+              isDot: true
+            });
+          } else if (points.length > 1) {
+            // Multiple points - smooth the stroke and save it
+            const smoothedPoints = smoothPath(points);
+
+            // Save the stroke
+            strokes.push({
+              points: smoothedPoints,
+              color: currentColor,
+              size: currentSize,
+              tool: currentTool,
+              isDot: false
+            });
+
+            // Final redraw to ensure perfect smoothness
+            redrawCanvas();
+          }
+
+          points = [];
+          updatePerformanceStats();
+        }
+
+        function drawDot(x, y) {
+          ctx.beginPath();
+          ctx.arc(x, y, currentSize / 2, 0, Math.PI * 2);
+          ctx.fillStyle = currentColor;
+          ctx.fill();
+        }
+
+
+
+        function drawSmoothStroke(points, color, size) {
+          if (points.length < 2) return;
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = size;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+
+          if (points.length === 2) {
+            // For just two points, draw a simple line
+            ctx.moveTo(points[0].x, points[0].y);
+            ctx.lineTo(points[1].x, points[1].y);
+          } else {
+            // Use Catmull-Rom spline for smoother curves
+            ctx.moveTo(points[0].x, points[0].y);
+
+            // For the first segment, use quadratic curve
+            if (points.length > 2) {
+              const cp1x = (points[0].x + points[1].x) / 2;
+              const cp1y = (points[0].y + points[1].y) / 2;
+              ctx.quadraticCurveTo(cp1x, cp1y, points[1].x, points[1].y);
+            }
+
+            // For middle segments, use bezier curves for maximum smoothness
+            for (let i = 1; i < points.length - 2; i++) {
+              const p0 = points[i - 1];
+              const p1 = points[i];
+              const p2 = points[i + 1];
+              const p3 = points[i + 2];
+
+              // Calculate control points for smooth Catmull-Rom spline
+              const cp1x = p1.x + (p2.x - p0.x) / 6;
+              const cp1y = p1.y + (p2.y - p0.y) / 6;
+              const cp2x = p2.x - (p3.x - p1.x) / 6;
+              const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+              ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+            }
+
+            // For the last segment
+            if (points.length > 2) {
+              const lastIdx = points.length - 1;
+              const cp2x = (points[lastIdx - 1].x + points[lastIdx].x) / 2;
+              const cp2y = (points[lastIdx - 1].y + points[lastIdx].y) / 2;
+              ctx.quadraticCurveTo(cp2x, cp2y, points[lastIdx].x, points[lastIdx].y);
+            }
+          }
+
+          ctx.stroke();
+        }
+
+        function redrawCanvas() {
+          // Clear canvas but don't fill with white - let it be transparent
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Redraw all completed strokes
+          strokes.forEach(stroke => {
+            if (stroke.isDot && stroke.points.length === 1) {
+              // Draw dot
+              const point = stroke.points[0];
+              ctx.beginPath();
+              ctx.arc(point.x, point.y, stroke.size / 2, 0, Math.PI * 2);
+              ctx.fillStyle = stroke.color;
+              ctx.fill();
+            } else {
+              // Draw smooth stroke
+              drawSmoothStroke(stroke.points, stroke.color, stroke.size);
+            }
+          });
+        }
+
+        // ===== UI FUNCTIONS =====
+        function initializeUI() {
+          // Create color palette
+          const colorPalette = document.getElementById('colorPalette');
+          colors.forEach(color => {
+            const colorBtn = document.createElement('div');
+            colorBtn.className = 'color-btn';
+            colorBtn.style.backgroundColor = color;
+            colorBtn.onclick = () => selectColor(color);
+            if (color === currentColor) colorBtn.classList.add('active');
+            colorPalette.appendChild(colorBtn);
+          });
+
+          // Create size palette
+          const sizePalette = document.getElementById('sizePalette');
+          sizes.forEach(size => {
+            const sizeBtn = document.createElement('div');
+            sizeBtn.className = 'size-btn';
+            if (size === currentSize) sizeBtn.classList.add('active');
+
+            const preview = document.createElement('div');
+            preview.className = 'size-preview';
+            preview.style.width = Math.min(size, 20) + 'px';
+            preview.style.height = Math.min(size, 20) + 'px';
+
+            sizeBtn.appendChild(preview);
+            sizeBtn.onclick = () => selectSize(size);
+            sizePalette.appendChild(sizeBtn);
+          });
+        }
+
+        function selectTool(tool) {
+          currentTool = tool;
+
+          // Update UI
+          document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+          document.getElementById(tool + 'Tool').classList.add('active');
+
+          // Update cursor based on tool
+          if (tool === 'pen') {
+            canvas.style.cursor = 'crosshair';
+          } else if (tool === 'bucket') {
+            canvas.style.cursor = 'pointer';
+          } else {
+            canvas.style.cursor = 'default';
+          }
+
+          // Hide palettes when switching tools
+          hideColorPalette();
+          hideSizePalette();
+        }
+
+        function selectColor(color) {
+          currentColor = color;
+
+          // Update UI
+          document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+          event.target.classList.add('active');
+
+          // Update color preview in toolbar
+          const colorPreview = document.querySelector('.color-preview');
+          if (colorPreview) {
+            colorPreview.style.backgroundColor = color;
+          }
+
+          hideColorPalette();
+        }
+
+        function selectSize(size) {
+          currentSize = size;
+
+          // Update UI
+          document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active'));
+          event.target.classList.add('active');
+
+          // Update size preview in toolbar
+          const sizePreview = document.querySelector('.size-preview');
+          if (sizePreview) {
+            const previewSize = Math.min(size, 20); // Cap at 20px for UI
+            sizePreview.style.width = previewSize + 'px';
+            sizePreview.style.height = previewSize + 'px';
+          }
+
+          hideSizePalette();
+        }
+
+        function toggleColorPalette() {
+          const palette = document.getElementById('colorPalette');
+          palette.style.display = palette.style.display === 'flex' ? 'none' : 'flex';
+          hideSizePalette();
+        }
+
+        function toggleSizePalette() {
+          const palette = document.getElementById('sizePalette');
+          palette.style.display = palette.style.display === 'flex' ? 'none' : 'flex';
+          hideColorPalette();
+        }
+
+        function hideColorPalette() {
+          document.getElementById('colorPalette').style.display = 'none';
+        }
+
+        function hideSizePalette() {
+          document.getElementById('sizePalette').style.display = 'none';
+        }
+
+        // ===== PERFORMANCE MONITORING =====
+        function updatePerformanceStats() {
+          const now = performance.now();
+          frameCount++;
+
+          if (now - lastTime >= 1000) {
+            fps = Math.round((frameCount * 1000) / (now - lastTime));
+            frameCount = 0;
+            lastTime = now;
+
+            document.getElementById('fps').textContent = fps;
+          }
+
+          document.getElementById('strokeCount').textContent = strokes.length;
+
+          const totalPoints = strokes.reduce((sum, stroke) => sum + stroke.points.length, 0);
+          document.getElementById('pointCount').textContent = totalPoints;
+        }
+
+        // ===== EVENT LISTENERS =====
+        function setupEventListeners() {
+          // Canvas events
           canvas.addEventListener('mousedown', startDrawing);
           canvas.addEventListener('mousemove', draw);
-          canvas.addEventListener('mouseup', finishDrawing);
-          canvas.addEventListener('mouseout', finishDrawing);
+          canvas.addEventListener('mouseup', stopDrawing);
+          canvas.addEventListener('mouseout', stopDrawing);
 
-          // Touch events (fallback)
+          // Touch events
           canvas.addEventListener('touchstart', startDrawing, { passive: false });
           canvas.addEventListener('touchmove', draw, { passive: false });
-          canvas.addEventListener('touchend', finishDrawing);
-          canvas.addEventListener('touchcancel', finishDrawing);
+          canvas.addEventListener('touchend', stopDrawing, { passive: false });
+          canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+
+          // Tool buttons
+          document.getElementById('penTool').onclick = () => selectTool('pen');
+          document.getElementById('bucketTool').onclick = () => selectTool('bucket');
+          document.getElementById('colorTool').onclick = toggleColorPalette;
+          document.getElementById('sizeTool').onclick = toggleSizePalette;
+          document.getElementById('undoTool').onclick = undo;
+          document.getElementById('clearTool').onclick = clearCanvas;
+
+          // Window events
+          window.addEventListener('resize', resizeCanvas);
+
+          // Hide palettes when clicking outside
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('#colorPalette') && !e.target.closest('#colorTool')) {
+              hideColorPalette();
+            }
+            if (!e.target.closest('#sizePalette') && !e.target.closest('#sizeTool')) {
+              hideSizePalette();
+            }
+          });
         }
 
-        // Notify React Native that canvas is ready
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'canvasReady',
-          width: canvas.width,
-          height: canvas.height
-        }));
+        // ===== INITIALIZATION =====
+        function init() {
+          resizeCanvas();
+          initializeUI();
+          setupEventListeners();
+
+          // Initialize toolbar previews
+          const colorPreview = document.querySelector('.color-preview');
+          if (colorPreview) {
+            colorPreview.style.backgroundColor = currentColor;
+          }
+
+          const sizePreview = document.querySelector('.size-preview');
+          if (sizePreview) {
+            const previewSize = Math.min(currentSize, 20);
+            sizePreview.style.width = previewSize + 'px';
+            sizePreview.style.height = previewSize + 'px';
+          }
+
+          // Start performance monitoring (less frequent for better performance)
+          setInterval(updatePerformanceStats, 500);
+
+          console.log('Optimized HTML5 Canvas initialized successfully!');
+        }
+
+        // Start when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else {
+          init();
+        }
       </script>
     </body>
     </html>
   `;
 
-  // State for canvas information
-  const [canvasInfo, setCanvasInfo] = useState({ width: 0, height: 0 });
-  const [pathCount, setPathCount] = useState(0);
-  const [undoCount, setUndoCount] = useState(0);
-  const [canvasReady, setCanvasReady] = useState(false);
-
-  // Generate a unique user ID for this session (for multiplayer)
-  const userId = useRef(`user-${Date.now()}-${Math.floor(Math.random() * 10000)}`).current;
-
-  // Handle messages from WebView
-  const handleWebViewMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-
-      // Handle different message types
-      switch (data.type) {
-        case 'canvasReady':
-          setCanvasInfo({
-            width: data.width,
-            height: data.height
-          });
-          setCanvasReady(true);
-
-          // Set user ID in the WebView
-          sendMessageToWebView({
-            type: 'setUserId',
-            userId: userId
-          });
-          break;
-
-        case 'newPath':
-          // Handle new path drawn by the user
-          setPathCount(data.count);
-
-          // In a real multiplayer implementation, you would send this path to other users
-          // For example: sendPathToServer(data.path);
-          break;
-
-        case 'undo':
-          setPathCount(data.pathsCount);
-          setUndoCount(data.undoStackCount);
-          break;
-
-        case 'redo':
-          setPathCount(data.pathsCount);
-          setUndoCount(data.undoStackCount);
-          break;
-
-        case 'clear':
-          setPathCount(0);
-          setUndoCount(0);
-          break;
-      }
-    } catch (error) {
-      console.error('Error parsing WebView message:', error);
-    }
-  };
-
-  // Send message to WebView with optimized approach
-  const sendMessageToWebView = (message: any) => {
-    if (webViewRef.current) {
-      webViewRef.current.injectJavaScript(`
-        window.postMessage(${JSON.stringify(JSON.stringify(message))}, '*');
-        true;
-      `);
-    }
-  };
-
-  // Function to add a remote path (for multiplayer)
-  const addRemotePath = (path: any) => {
-    sendMessageToWebView({
-      type: 'addRemotePath',
-      path: path
-    });
-  };
-
-  // Function to sync all paths (for multiplayer)
-  const syncPaths = (paths: any[]) => {
-    sendMessageToWebView({
-      type: 'syncPaths',
-      paths: paths
-    });
-  };
-
-  // Tool selection handlers
-  const handleToolSelect = (tool: 'pen' | 'eraser' | 'bucket') => {
-    setCurrentTool(tool);
-    sendMessageToWebView({ type: 'setTool', tool });
-  };
-
-  // Color selection handler
-  const handleColorSelect = (color: string) => {
-    setCurrentColor(color);
-    sendMessageToWebView({ type: 'setColor', color });
-  };
-
-  // Brush size handler
-  const handleBrushSizeChange = (size: number) => {
-    setBrushSize(size);
-    sendMessageToWebView({ type: 'setBrushSize', size });
-  };
-
-  // Clear canvas
-  const handleClear = () => {
-    Alert.alert(
-      'Clear Canvas',
-      'Are you sure you want to clear the canvas?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          onPress: () => sendMessageToWebView({ type: 'clear' }),
-          style: 'destructive'
-        },
-      ]
-    );
-  };
-
-  // Undo last path
-  const handleUndo = () => {
-    sendMessageToWebView({ type: 'undo' });
-  };
-
-  // Redo last undone path
-  const handleRedo = () => {
-    sendMessageToWebView({ type: 'redo' });
-  };
-
-  // Go back to dashboard
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  // Available colors
-  const colors = [
-    theme.primary,
-    theme.secondary,
-    theme.success,
-    theme.warning,
-    theme.error,
-    theme.info,
-    '#000000',
-    '#FFFFFF',
-  ];
-
-  // Available brush sizes
-  const brushSizes = [2, 5, 10, 15];
-
   return (
-    <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={[
-        styles.header,
-        {
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm
-        }
-      ]}>
-        <TouchableOpacity
-          style={[
-            styles.backButton,
-            {
-              backgroundColor: theme.backgroundAlt,
-              borderRadius: borderRadius.round / 2,
-              ...applyThemeShadow('sm')
-            }
-          ]}
-          onPress={handleBack}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
-        </TouchableOpacity>
-
-        <Text
-          variant="heading"
-          size={typography.fontSizes.xxl}
-        >
-          HTML5 Canvas Test
-        </Text>
-
-        <View style={{ width: 44 }} />
-      </View>
-
-      {/* Canvas */}
-      <View style={[
-        styles.canvasContainer,
-        {
-          backgroundColor: theme.canvasBackground,
-          margin: spacing.xs,
-          borderRadius: borderRadius.xl,
-          ...Platform.select({
-            ios: applyThemeShadow('md'),
-            android: applyThemeShadow('md')
-          })
-        }
-      ]}>
-        <WebView
-          ref={webViewRef}
-          originWhitelist={['*']}
-          source={{ html: htmlContent }}
-          onMessage={handleWebViewMessage}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          scrollEnabled={false}
-          bounces={false}
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          style={styles.webView}
-          cacheEnabled={true}
-          cacheMode="LOAD_DEFAULT"
-          allowFileAccess={true}
-          allowFileAccessFromFileURLs={true}
-          allowUniversalAccessFromFileURLs={true}
-          renderToHardwareTextureAndroid={true}
-          useWebKit={true}
-          textZoom={100}
-          onShouldStartLoadWithRequest={() => true}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View style={[styles.loadingContainer, { backgroundColor: theme.canvasBackground }]}>
-              <Text
-                variant="heading"
-                size={typography.fontSizes.lg}
-                color={theme.textSecondary}
-              >
-                Loading Canvas...
-              </Text>
-            </View>
-          )}
-        />
-      </View>
-
-      {/* Drawing Tools */}
-      <View style={[
-        styles.toolsContainer,
-        {
-          backgroundColor: theme.surface,
-          borderTopColor: theme.border,
-          borderTopWidth: 1,
-          paddingVertical: spacing.xs,
-          paddingHorizontal: spacing.sm
-        }
-      ]}>
-        {/* Tool Selection */}
-        <View style={styles.toolsRow}>
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: currentTool === 'pen' ? theme.primary + '40' : theme.backgroundAlt,
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={() => handleToolSelect('pen')}
-          >
-            <Ionicons name="brush-outline" size={24} color={currentTool === 'pen' ? theme.primary : theme.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: currentTool === 'eraser' ? theme.primary + '40' : theme.backgroundAlt,
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={() => handleToolSelect('eraser')}
-          >
-            <Ionicons name="trash-outline" size={24} color={currentTool === 'eraser' ? theme.primary : theme.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: currentTool === 'bucket' ? theme.primary + '40' : theme.backgroundAlt,
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={() => handleToolSelect('bucket')}
-          >
-            <Ionicons name="color-fill-outline" size={24} color={currentTool === 'bucket' ? theme.primary : theme.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: theme.backgroundAlt,
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={handleUndo}
-          >
-            <Ionicons name="arrow-undo" size={24} color={theme.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: theme.backgroundAlt,
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={handleRedo}
-          >
-            <Ionicons name="arrow-redo" size={24} color={theme.text} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.toolButton,
-              {
-                backgroundColor: theme.error + '20',
-                borderRadius: borderRadius.round / 2
-              }
-            ]}
-            onPress={handleClear}
-          >
-            <Ionicons name="trash-bin-outline" size={24} color={theme.error} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Color Selection */}
-        <View style={styles.colorRow}>
-          {colors.map((color, index) => (
-            <TouchableOpacity
-              key={`color-${index}`}
-              style={[
-                styles.colorButton,
-                {
-                  backgroundColor: color,
-                  borderRadius: borderRadius.round,
-                  borderWidth: 2,
-                  borderColor: color === currentColor ? theme.primary : 'transparent'
-                }
-              ]}
-              onPress={() => handleColorSelect(color)}
-            />
-          ))}
-        </View>
-
-        {/* Brush Size Selection */}
-        <View style={styles.brushSizeRow}>
-          {brushSizes.map((size, index) => (
-            <TouchableOpacity
-              key={`size-${index}`}
-              style={[
-                styles.brushSizeButton,
-                {
-                  borderRadius: borderRadius.round,
-                  borderWidth: 2,
-                  borderColor: size === brushSize ? theme.primary : 'transparent',
-                  backgroundColor: theme.backgroundAlt
-                }
-              ]}
-              onPress={() => handleBrushSizeChange(size)}
-            >
-              <View
-                style={{
-                  width: size,
-                  height: size,
-                  borderRadius: size / 2,
-                  backgroundColor: currentColor
-                }}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </SafeAreaContainer>
+    <View style={[styles.container, { backgroundColor: theme.canvasBackground }]}>
+      {/* Canvas WebView - Full Screen */}
+      <WebView
+        key={webViewKey} // Force reload when theme changes
+        ref={webViewRef}
+        source={{ html: htmlContent }}
+        javaScriptEnabled={true}
+        scrollEnabled={false}
+        bounces={false}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        style={styles.webView}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.warn('WebView error: ', nativeEvent);
+        }}
+        onHttpError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.warn('WebView HTTP error: ', nativeEvent);
+        }}
+      />
+    </View>
   );
 };
 
@@ -1082,81 +876,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  canvasContainer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
   webView: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  toolsContainer: {
-    width: '100%',
-  },
-  toolsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  toolButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  colorRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  colorButton: {
-    width: 30,
-    height: 30,
-  },
-  brushSizeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  brushSizeButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusText: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    padding: 4,
-    borderRadius: 4,
-    fontSize: 10,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    color: 'white',
   },
 });
 
