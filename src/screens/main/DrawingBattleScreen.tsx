@@ -20,6 +20,7 @@ import {
   VirtualKeyboard,
   TopBar,
   SettingsModal,
+  ReactionOverlay,
 } from '../../components/drawing-battle';
 
 const DrawingBattleScreen = () => {
@@ -126,6 +127,9 @@ const DrawingBattleScreen = () => {
   const MESSAGE_RATE_LIMIT = 3; // Max 3 messages
   const RATE_LIMIT_WINDOW = 10000; // Per 10 seconds
   const RATE_LIMIT_COOLDOWN = 5000; // 5 second cooldown when limit hit
+
+  // Reaction state
+  const [userReaction, setUserReaction] = useState<'like' | 'dislike' | null>(null);
 
   // Generate custom player data with current user's profile
   const getCustomPlayerData = useCallback(() => {
@@ -375,6 +379,27 @@ const DrawingBattleScreen = () => {
     navigation.goBack();
   };
 
+  // Reaction handlers
+  const handleLike = () => {
+    setUserReaction('like');
+    // TODO: Send reaction to server/other players
+    console.log('User liked the drawing');
+
+    // For now, simulate adding a message to chat
+    // In real implementation, this would be handled by the server
+    // and broadcast to all players
+  };
+
+  const handleDislike = () => {
+    setUserReaction('dislike');
+    // TODO: Send reaction to server/other players
+    console.log('User disliked the drawing');
+
+    // For now, simulate adding a message to chat
+    // In real implementation, this would be handled by the server
+    // and broadcast to all players
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
       {/* Status Bar Spacer - ensures consistent spacing on both platforms */}
@@ -400,6 +425,13 @@ const DrawingBattleScreen = () => {
             currentSize={currentSize}
             onUndo={handleUndo}
             onClear={handleClear}
+          />
+
+          {/* Reaction Overlay - positioned over canvas */}
+          <ReactionOverlay
+            onLike={handleLike}
+            onDislike={handleDislike}
+            visible={true}
           />
         </View>
 

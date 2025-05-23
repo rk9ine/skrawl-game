@@ -6,3 +6,4 @@ export { default as MessageInput } from './MessageInput';
 export { default as VirtualKeyboard } from './VirtualKeyboard';
 export { default as TopBar } from './TopBar';
 export { default as SettingsModal } from './SettingsModal';
+export { default as ReactionOverlay } from './ReactionOverlay';
