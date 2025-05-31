@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.amazonian.app'
+    namespace 'com.skrawl.app'
     defaultConfig {
-        applicationId 'com.amazonian.app'
+        applicationId 'com.skrawl.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

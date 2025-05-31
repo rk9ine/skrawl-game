@@ -11,23 +11,23 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Amazonian</Text>
-          <Text style={styles.subtitle}>Explore the Amazon through art!</Text>
+          <Text style={styles.title}>Skrawl</Text>
+          <Text style={styles.subtitle}>Draw, Battle, Create!</Text>
         </View>
 
         <View style={styles.cardContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate('Drawing' as never)}
           >
             <View style={styles.cardContent}>
               <Ionicons name="brush" size={40} color="#6A8D73" />
               <Text style={styles.cardTitle}>Start Drawing</Text>
-              <Text style={styles.cardDescription}>Create your own Amazonian artwork</Text>
+              <Text style={styles.cardDescription}>Create your own artwork</Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate('Gallery' as never)}
           >
@@ -40,9 +40,9 @@ const HomeScreen = () => {
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>About Amazonian</Text>
+          <Text style={styles.infoTitle}>About Skrawl</Text>
           <Text style={styles.infoText}>
-            Amazonian is a drawing app that lets you create beautiful artwork inspired by the Amazon rainforest.
+            Skrawl is a drawing app that lets you create beautiful artwork and battle with friends.
             Explore different drawing tools and save your creations to your gallery.
           </Text>
         </View>

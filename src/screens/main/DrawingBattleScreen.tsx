@@ -191,7 +191,8 @@ const DrawingBattleScreen = () => {
         isReady: true,
         avatarIcon: user.avatar || 'person',
         avatarColor: '#4361EE',
-        isCurrentUser: true
+        isCurrentUser: true,
+        avatarData: user.avatarData
       },
     ];
   }, [user]);

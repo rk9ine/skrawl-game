@@ -1,4 +1,4 @@
-# Amazonian
+# Skrawl
 
 A drawing mobile app game built with React Native and Expo.
 
@@ -34,8 +34,8 @@ A drawing mobile app game built with React Native and Expo.
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/amazonian.git
-cd amazonian
+git clone https://github.com/yourusername/skrawl.git
+cd skrawl
 ```
 
 2. Install dependencies
@@ -68,7 +68,7 @@ yarn android
 ## Project Structure
 
 ```
-amazonian/
+skrawl/
 ├── src/
 │   ├── assets/        # Images, fonts, etc.
 │   ├── components/    # Reusable components

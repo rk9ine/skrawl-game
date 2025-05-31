@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Amazonian",
-    "slug": "Amazonian",
+    "name": "Skrawl",
+    "slug": "skrawl",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,17 +12,17 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "scheme": "amazonian",
+    "scheme": "skrawl",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.amazonian.app"
+      "bundleIdentifier": "com.skrawl.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.amazonian.app",
+      "package": "com.skrawl.app",
       "edgeToEdgeEnabled": true
     },
     "web": {

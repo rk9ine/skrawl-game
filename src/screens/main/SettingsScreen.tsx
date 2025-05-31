@@ -9,10 +9,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
-import { Text, SafeAreaContainer } from '../../components/ui';
+import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { MainStackParamList } from '../../types/navigation';
 
@@ -152,7 +151,7 @@ const SettingsScreen = () => {
           ]}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <CustomIcon name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
         <Text
@@ -399,7 +398,7 @@ const SettingsScreen = () => {
               </View>
 
               {themeType === 'system' && (
-                <Ionicons name="checkmark" size={24} color={theme.primary} />
+                <CustomIcon name="checkmark" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
           </View>

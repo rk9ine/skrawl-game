@@ -13,36 +13,49 @@ import {
   useWindowDimensions,
   ScrollView,
   PanResponder,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
-import { Text, SafeAreaContainer } from '../../components/ui';
+import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
+import GifAvatar from '../../components/avatar/GifAvatar';
+import AndroidGifAvatar from '../../components/avatar/AndroidGifAvatar';
 
 type ProfileSetupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-// Avatar options using Ionicons
+// Avatar options using custom images and fallback icons
 const avatarOptions = [
-  { id: '1', icon: 'person', color: '#FF5733' },
-  { id: '2', icon: 'happy', color: '#33FF57' },
-  { id: '3', icon: 'rocket', color: '#3357FF' },
-  { id: '4', icon: 'planet', color: '#FF33E6' },
-  { id: '5', icon: 'star', color: '#FFD700' },
-  { id: '6', icon: 'heart', color: '#FF4081' },
-  { id: '7', icon: 'paw', color: '#795548' },
-  { id: '8', icon: 'football', color: '#8D6E63' },
-  { id: '9', icon: 'basketball', color: '#FF9800' },
-  { id: '10', icon: 'baseball', color: '#FFEB3B' },
-  { id: '11', icon: 'tennisball', color: '#CDDC39' },
-  { id: '12', icon: 'american-football', color: '#9C27B0' },
-  { id: '13', icon: 'musical-notes', color: '#2196F3' },
-  { id: '14', icon: 'game-controller', color: '#673AB7' },
-  { id: '15', icon: 'brush', color: '#4CAF50' },
-  { id: '16', icon: 'camera', color: '#607D8B' },
+  // Custom GIF avatars (your actual files)
+  { id: '1', name: 'Pirate', image: require('../../../assets/avatars/avatar_pirate.gif') },
+  { id: '2', name: 'Cat', image: require('../../../assets/avatars/avatar_cat.gif') },
+  { id: '3', name: 'Dog', image: require('../../../assets/avatars/avatar_dog.gif') },
+  { id: '4', name: 'Laugh', image: require('../../../assets/avatars/avatar_laugh.gif') },
+  { id: '5', name: 'Ninja', image: require('../../../assets/avatars/avatar_ninja.gif') },
+  { id: '6', name: 'Sad', image: require('../../../assets/avatars/avatar_sad.gif') },
+  { id: '7', name: 'Shocked', image: require('../../../assets/avatars/avatar_shocked.gif') },
+  { id: '8', name: 'Smile', image: require('../../../assets/avatars/avatar_smile.gif') },
+  { id: '9', name: 'Upset', image: require('../../../assets/avatars/avatar_upset.gif') },
+  { id: '10', name: 'Weird', image: require('../../../assets/avatars/avatar_weird.gif') },
+  { id: '11', name: 'Wizard', image: require('../../../assets/avatars/avatar_wizard.gif') },
+
+  // Fallback icon avatars for additional variety
+  { id: '12', icon: 'person', color: '#FF5733', name: 'Person' },
+  { id: '13', icon: 'happy', color: '#33FF57', name: 'Happy' },
+  { id: '14', icon: 'rocket', color: '#3357FF', name: 'Rocket' },
+  { id: '15', icon: 'planet', color: '#FF33E6', name: 'Planet' },
+  { id: '16', icon: 'star', color: '#FFD700', name: 'Star' },
+  { id: '17', icon: 'heart', color: '#FF4081', name: 'Heart' },
+  { id: '18', icon: 'paw', color: '#795548', name: 'Paw' },
+  { id: '19', icon: 'football', color: '#8D6E63', name: 'Football' },
+  { id: '20', icon: 'basketball', color: '#FF9800', name: 'Basketball' },
+  { id: '21', icon: 'musical-notes', color: '#2196F3', name: 'Music' },
+  { id: '22', icon: 'game-controller', color: '#673AB7', name: 'Gaming' },
+  { id: '23', icon: 'brush', color: '#4CAF50', name: 'Artist' },
+  { id: '24', icon: 'flash', color: '#FFC107', name: 'Lightning' },
 ];
 
 /**
@@ -60,75 +73,17 @@ const ProfileSetupScreen = () => {
   const slideAnim = useState(new Animated.Value(50))[0];
   const avatarSwipeAnim = useRef(new Animated.Value(0)).current;
   const avatarScaleAnim = useRef(new Animated.Value(1)).current;
-  const previewRowSwipeAnim = useRef(new Animated.Value(0)).current;
 
   // State for form
   const [username, setUsername] = useState('');
   const [selectedAvatarIndex, setSelectedAvatarIndex] = useState(0);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [visibleAvatars, setVisibleAvatars] = useState<typeof avatarOptions>([]);
   const [isSwipingAvatar, setIsSwipingAvatar] = useState(false);
-  const [isSwipingPreviewRow, setIsSwipingPreviewRow] = useState(false);
-  const [previewStartIndex, setPreviewStartIndex] = useState(0);
 
   // Get the currently selected avatar
   const selectedAvatar = avatarOptions[selectedAvatarIndex];
 
-  // Calculate how many avatars to show in the preview row
-  const getPreviewCount = () => {
-    if (width < 350) return 3; // Small phones
-    if (width < 500) return 5; // Regular phones
-    return 7; // Tablets and larger devices
-  };
 
-  // Update visible avatars when selected avatar changes or preview start index changes
-  useEffect(() => {
-    updateVisibleAvatars();
-  }, [selectedAvatarIndex, previewStartIndex, width]);
-
-  // Update the visible avatars in the preview row
-  const updateVisibleAvatars = () => {
-    const previewCount = getPreviewCount();
-
-    const newVisibleAvatars = [];
-    for (let i = 0; i < previewCount; i++) {
-      const index = (previewStartIndex + i) % avatarOptions.length;
-      newVisibleAvatars.push(avatarOptions[index]);
-    }
-
-    setVisibleAvatars(newVisibleAvatars);
-  };
-
-  // Shift the preview row to show the next/previous set of avatars
-  const shiftPreviewRow = (direction: number) => {
-    // Calculate new start index with wrapping
-    const previewCount = getPreviewCount();
-    let newStartIndex = (previewStartIndex + direction) % avatarOptions.length;
-    if (newStartIndex < 0) newStartIndex += avatarOptions.length;
-
-    // Animate the shift
-    const toValue = direction * -100; // Swipe distance
-
-    // First animate the swipe out
-    Animated.timing(previewRowSwipeAnim, {
-      toValue: toValue,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      // Update the start index
-      setPreviewStartIndex(newStartIndex);
-
-      // Reset the animation value
-      previewRowSwipeAnim.setValue(-toValue);
-
-      // Then animate the swipe in
-      Animated.spring(previewRowSwipeAnim, {
-        toValue: 0,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-    });
-  };
 
   // Configure pan responder for main avatar swipe gestures
   const avatarPanResponder = useRef(
@@ -160,35 +115,7 @@ const ProfileSetupScreen = () => {
     })
   ).current;
 
-  // Configure pan responder for preview row swipe gestures
-  const previewRowPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsSwipingPreviewRow(true);
-        previewRowSwipeAnim.setValue(0);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        previewRowSwipeAnim.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        setIsSwipingPreviewRow(false);
 
-        // Determine if swipe was significant enough to shift preview row
-        if (Math.abs(gestureState.dx) > 50) {
-          const direction = gestureState.dx > 0 ? -1 : 1; // Swipe left means next set (right)
-          shiftPreviewRow(direction);
-        } else {
-          // Reset position if swipe wasn't significant
-          Animated.spring(previewRowSwipeAnim, {
-            toValue: 0,
-            useNativeDriver: true,
-            friction: 5,
-          }).start();
-        }
-      },
-    })
-  ).current;
 
   // Pre-fill username if user has an email
   useEffect(() => {
@@ -211,9 +138,6 @@ const ProfileSetupScreen = () => {
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Initialize visible avatars
-    updateVisibleAvatars();
   }, [user, fadeAnim, slideAnim]);
 
   // Change avatar with animation
@@ -232,13 +156,6 @@ const ProfileSetupScreen = () => {
     }).start(() => {
       // Update the selected avatar
       setSelectedAvatarIndex(newIndex);
-
-      // Also update the preview row to center on the selected avatar
-      const previewCount = getPreviewCount();
-      const halfCount = Math.floor(previewCount / 2);
-      let newStartIndex = newIndex - halfCount;
-      if (newStartIndex < 0) newStartIndex += avatarOptions.length;
-      setPreviewStartIndex(newStartIndex);
 
       // Reset the animation value
       avatarSwipeAnim.setValue(-toValue);
@@ -276,31 +193,7 @@ const ProfileSetupScreen = () => {
     changeAvatar(-1);
   };
 
-  // Handle avatar selection from preview row
-  const handleSelectAvatar = (avatar: typeof avatarOptions[0]) => {
-    const index = avatarOptions.findIndex(a => a.id === avatar.id);
-    if (index !== -1 && index !== selectedAvatarIndex) {
-      // Determine direction for animation
-      const direction = index > selectedAvatarIndex ? 1 : -1;
 
-      // Set the new index directly
-      setSelectedAvatarIndex(index);
-
-      // Animate the scale for a bounce effect
-      Animated.sequence([
-        Animated.timing(avatarScaleAnim, {
-          toValue: 0.9,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(avatarScaleAnim, {
-          toValue: 1,
-          friction: 3,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  };
 
   // Validate username
   const validateUsername = (value: string): boolean => {
@@ -332,17 +225,27 @@ const ProfileSetupScreen = () => {
   // Handle complete profile setup
   const handleCompleteSetup = () => {
     if (validateUsername(username)) {
+      // Create comprehensive avatar data
+      const avatarData = {
+        type: selectedAvatar.image ? 'custom' : 'icon',
+        value: selectedAvatar.icon || selectedAvatar.name,
+        color: selectedAvatar.color,
+        ...(selectedAvatar.image && { imagePath: selectedAvatar.name })
+      };
+
       // Update user profile with selected username and avatar
       updateUserProfile({
         displayName: username,
-        avatar: selectedAvatar.icon, // Store the icon name
+        avatar: selectedAvatar.icon || selectedAvatar.name, // Keep simple for backward compatibility
+        avatarData: JSON.stringify(avatarData), // Store detailed avatar info
         hasCompletedProfileSetup: true,
       });
 
       // Log to confirm profile setup is complete
       console.log('Profile setup complete:', {
         username,
-        avatar: selectedAvatar.icon,
+        avatar: selectedAvatar.icon || selectedAvatar.name,
+        avatarData,
         hasCompletedProfileSetup: true
       });
     }
@@ -371,94 +274,7 @@ const ProfileSetupScreen = () => {
     );
   };
 
-  // Render preview avatar item
-  const renderPreviewAvatarItem = (item: typeof avatarOptions[0], index: number) => {
-    const isSelected = item.id === selectedAvatar.id;
-    const previewSize = 42;
-    const iconSize = 24;
 
-    if (Platform.OS === 'android') {
-      // Android-specific implementation to fix background issues
-      return (
-        <TouchableOpacity
-          key={item.id}
-          style={[
-            styles.previewAvatarItem,
-            {
-              width: previewSize,
-              height: previewSize,
-              margin: spacing.xxs,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'transparent',
-            }
-          ]}
-          onPress={() => handleSelectAvatar(item)}
-        >
-          <View
-            style={{
-              position: 'absolute',
-              width: previewSize,
-              height: previewSize,
-              borderRadius: borderRadius.md,
-              borderWidth: isSelected ? 2 : 0,
-              borderColor: theme.primary,
-              backgroundColor: isSelected ? theme.primary + '30' : 'transparent',
-            }}
-          />
-          <View
-            style={{
-              width: previewSize * 0.8,
-              height: previewSize * 0.8,
-              borderRadius: previewSize * 0.4,
-              backgroundColor: item.color,
-              justifyContent: 'center',
-              alignItems: 'center',
-              elevation: 2,
-            }}
-          >
-            <Ionicons name={item.icon as any} size={iconSize} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      );
-    } else {
-      // iOS implementation
-      return (
-        <TouchableOpacity
-          key={item.id}
-          style={[
-            styles.previewAvatarItem,
-            {
-              backgroundColor: isSelected ? theme.primary + '30' : 'transparent',
-              borderRadius: borderRadius.md,
-              borderWidth: isSelected ? 2 : 0,
-              borderColor: theme.primary,
-              width: previewSize,
-              height: previewSize,
-              margin: spacing.xxs,
-              overflow: 'hidden',
-              ...applyThemeShadow('sm')
-            },
-          ]}
-          onPress={() => handleSelectAvatar(item)}
-        >
-          <View
-            style={[
-              styles.avatarIconContainer,
-              {
-                backgroundColor: item.color,
-                width: previewSize * 0.8,
-                height: previewSize * 0.8,
-                borderRadius: previewSize * 0.4,
-              }
-            ]}
-          >
-            <Ionicons name={item.icon as any} size={iconSize} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      );
-    }
-  };
 
   return (
     <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
@@ -479,7 +295,7 @@ const ProfileSetupScreen = () => {
             ]}
             onPress={handleBack}
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <CustomIcon name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
 
           <Text
@@ -545,7 +361,7 @@ const ProfileSetupScreen = () => {
                   ]}
                   onPress={handlePrevAvatar}
                 >
-                  <Ionicons name="chevron-back" size={22} color={theme.text} />
+                  <CustomIcon name="chevron-back" size={22} color={theme.text} />
                 </TouchableOpacity>
 
                 <Animated.View
@@ -560,36 +376,67 @@ const ProfileSetupScreen = () => {
                   ]}
                   {...avatarPanResponder.panHandlers}
                 >
-                  {Platform.OS === 'android' ? (
-                    // Android-specific implementation
-                    <View style={{ width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}>
-                      <View
-                        style={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: 40,
-                          backgroundColor: selectedAvatar.color,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          elevation: 4,
-                        }}
-                      >
-                        <Ionicons name={selectedAvatar.icon as any} size={50} color="#FFFFFF" />
-                      </View>
+                  {selectedAvatar.image ? (
+                    // Custom image avatar with platform-specific GIF support
+                    <View style={[{ backgroundColor: 'transparent', ...applyThemeShadow('md') }]}>
+                      {Platform.OS === 'android' ? (
+                        <AndroidGifAvatar
+                          source={selectedAvatar.image}
+                          size={100}
+                        />
+                      ) : (
+                        <GifAvatar
+                          source={selectedAvatar.image}
+                          size={100}
+                        />
+                      )}
                     </View>
+                  ) : selectedAvatar.icon ? (
+                    Platform.OS === 'android' ? (
+                      // Android-specific implementation for icon fallback
+                      <View style={{ width: 100, height: 100, justifyContent: 'center', alignItems: 'center' }}>
+                        <View
+                          style={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: 50,
+                            backgroundColor: selectedAvatar.color,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            elevation: 4,
+                          }}
+                        >
+                          <CustomIcon name={selectedAvatar.icon as any} size={60} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    ) : (
+                      // iOS implementation for icon fallback
+                      <View
+                        style={[
+                          styles.selectedAvatarCircle,
+                          {
+                            backgroundColor: selectedAvatar.color,
+                            overflow: 'hidden',
+                            ...applyThemeShadow('md')
+                          }
+                        ]}
+                      >
+                        <CustomIcon name={selectedAvatar.icon as any} size={60} color="#FFFFFF" />
+                      </View>
+                    )
                   ) : (
-                    // iOS implementation
+                    // Fallback for avatars without image or icon
                     <View
                       style={[
                         styles.selectedAvatarCircle,
                         {
-                          backgroundColor: selectedAvatar.color,
+                          backgroundColor: '#CCCCCC',
                           overflow: 'hidden',
                           ...applyThemeShadow('md')
                         }
                       ]}
                     >
-                      <Ionicons name={selectedAvatar.icon as any} size={50} color="#FFFFFF" />
+                      <CustomIcon name="person" size={60} color="#FFFFFF" />
                     </View>
                   )}
                 </Animated.View>
@@ -605,46 +452,11 @@ const ProfileSetupScreen = () => {
                   ]}
                   onPress={handleNextAvatar}
                 >
-                  <Ionicons name="chevron-forward" size={22} color={theme.text} />
+                  <CustomIcon name="chevron-forward" size={22} color={theme.text} />
                 </TouchableOpacity>
               </View>
 
-              {/* Avatar Preview Row - Swipeable */}
-              <Animated.View
-                style={[
-                  styles.previewRowContainer,
-                  {
-                    transform: [{ translateX: previewRowSwipeAnim }]
-                  }
-                ]}
-                {...previewRowPanResponder.panHandlers}
-              >
-                {visibleAvatars.map((item, index) => renderPreviewAvatarItem(item, index))}
-              </Animated.View>
 
-              <View style={styles.previewRowIndicators}>
-                <TouchableOpacity
-                  style={styles.previewArrowButton}
-                  onPress={() => shiftPreviewRow(-1)}
-                >
-                  <Ionicons name="chevron-back" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-
-                <Text
-                  variant="caption"
-                  color={theme.textSecondary}
-                  style={{ textAlign: 'center', fontSize: typography.fontSizes.xs }}
-                >
-                  Swipe to browse more avatars
-                </Text>
-
-                <TouchableOpacity
-                  style={styles.previewArrowButton}
-                  onPress={() => shiftPreviewRow(1)}
-                >
-                  <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Username Input Section */}
@@ -769,36 +581,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   selectedAvatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  previewRowContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  previewRowIndicators: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  previewArrowButton: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  previewAvatarItem: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
+
   avatarIconContainer: {
     justifyContent: 'center',
     alignItems: 'center',

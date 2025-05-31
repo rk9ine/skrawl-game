@@ -4,7 +4,8 @@ export interface MockUser {
   email: string;
   displayName: string;
   avatarUrl?: string;
-  avatar?: string; // Emoji avatar
+  avatar?: string; // Simple avatar identifier for backward compatibility
+  avatarData?: string; // JSON string containing detailed avatar information
   createdAt: string;
   hasCompletedProfileSetup?: boolean; // Flag to track if user has completed profile setup
   stats: {

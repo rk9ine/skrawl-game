@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
-import { Text } from '../ui';
+import { Text, UserAvatar, CustomIcon } from '../ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { PlayerListPosition } from '../../store/layoutStore';
 import { useAuthStore } from '../../store/authStore';
@@ -199,7 +198,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
               </Text>
               {/* Active drawer icon */}
               {item.isDrawing && (
-                <Ionicons
+                <CustomIcon
                   name="brush"
                   size={16}
                   color={theme.primary}
@@ -218,20 +217,25 @@ const PlayerList: React.FC<PlayerListProps> = ({
           </View>
         </View>
 
-        {/* Player avatar - using Ionicons instead of emoji text */}
-        <View style={[
-          styles.avatarContainer,
-          {
-            backgroundColor: item.avatarColor || theme.primary,
-            borderRadius: borderRadius.round,
-          }
-        ]}>
-          <Ionicons
-            name={(item.avatarIcon as any) || 'person'}
-            size={20}
-            color="#FFFFFF"
+        {/* Player avatar - only show for current user with custom avatar */}
+        {item.isCurrentUser ? (
+          <UserAvatar
+            avatarData={user?.avatarData}
+            size={28}
+            backgroundColor={item.avatarColor || theme.primary}
           />
-        </View>
+        ) : (
+          <View
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 14,
+              backgroundColor: item.avatarColor || theme.primary,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          />
+        )}
       </View>
     );
   };

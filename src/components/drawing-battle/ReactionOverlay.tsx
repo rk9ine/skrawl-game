@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { CustomIcon } from '../ui';
 import { useTheme } from '../../theme/ThemeContext';
 
 interface ReactionOverlayProps {
@@ -108,7 +108,7 @@ const ReactionOverlay: React.FC<ReactionOverlayProps> = ({
         onPress={handleLike}
         activeOpacity={0.7}
       >
-        <Ionicons
+        <CustomIcon
           name="thumbs-up"
           size={18}
           color={likePressed ? '#FFFFFF' : 'rgba(255, 255, 255, 0.9)'}
@@ -125,7 +125,7 @@ const ReactionOverlay: React.FC<ReactionOverlayProps> = ({
         onPress={handleDislike}
         activeOpacity={0.7}
       >
-        <Ionicons
+        <CustomIcon
           name="thumbs-down"
           size={18}
           color={dislikePressed ? '#FFFFFF' : 'rgba(255, 255, 255, 0.9)'}

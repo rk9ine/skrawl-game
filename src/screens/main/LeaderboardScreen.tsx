@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store';
-import { Text, SafeAreaContainer } from '../../components/ui';
+import { Text, SafeAreaContainer, UserAvatar } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 
 // Mock leaderboard data - will be replaced with real API calls
@@ -25,17 +25,17 @@ interface LeaderboardPlayer {
 }
 
 const mockLeaderboardData: LeaderboardPlayer[] = [
-  { id: '1', name: 'ArtMaster', avatar: '🎨', score: 2450, rank: 1, gamesPlayed: 45, winRate: 78 },
-  { id: '2', name: 'SketchKing', avatar: '👑', score: 2380, rank: 2, gamesPlayed: 52, winRate: 73 },
-  { id: '3', name: 'DrawingQueen', avatar: '👸', score: 2290, rank: 3, gamesPlayed: 38, winRate: 81 },
-  { id: '4', name: 'PaintPro', avatar: '🖌️', score: 2150, rank: 4, gamesPlayed: 41, winRate: 69 },
-  { id: '5', name: 'CanvasHero', avatar: '🦸', score: 2080, rank: 5, gamesPlayed: 33, winRate: 75 },
-  { id: '6', name: 'DoodleMaster', avatar: '✏️', score: 1950, rank: 6, gamesPlayed: 29, winRate: 72 },
-  { id: '7', name: 'PixelArtist', avatar: '🎯', score: 1890, rank: 7, gamesPlayed: 35, winRate: 68 },
-  { id: '8', name: 'SketchWiz', avatar: '🧙', score: 1820, rank: 8, gamesPlayed: 27, winRate: 74 },
-  { id: '9', name: 'DrawingNinja', avatar: '🥷', score: 1750, rank: 9, gamesPlayed: 31, winRate: 65 },
-  { id: '10', name: 'ArtGenius', avatar: '🧠', score: 1680, rank: 10, gamesPlayed: 24, winRate: 70 },
-  { id: 'current-user', name: 'You', avatar: '😊', score: 1420, rank: 15, gamesPlayed: 18, winRate: 61 },
+  { id: '1', name: 'ArtMaster', avatar: 'brush', score: 2450, rank: 1, gamesPlayed: 45, winRate: 78 },
+  { id: '2', name: 'SketchKing', avatar: 'trophy', score: 2380, rank: 2, gamesPlayed: 52, winRate: 73 },
+  { id: '3', name: 'DrawingQueen', avatar: 'star', score: 2290, rank: 3, gamesPlayed: 38, winRate: 81 },
+  { id: '4', name: 'PaintPro', avatar: 'brush', score: 2150, rank: 4, gamesPlayed: 41, winRate: 69 },
+  { id: '5', name: 'CanvasHero', avatar: 'flash', score: 2080, rank: 5, gamesPlayed: 33, winRate: 75 },
+  { id: '6', name: 'DoodleMaster', avatar: 'brush', score: 1950, rank: 6, gamesPlayed: 29, winRate: 72 },
+  { id: '7', name: 'PixelArtist', avatar: 'star', score: 1890, rank: 7, gamesPlayed: 35, winRate: 68 },
+  { id: '8', name: 'SketchWiz', avatar: 'rocket', score: 1820, rank: 8, gamesPlayed: 27, winRate: 74 },
+  { id: '9', name: 'DrawingNinja', avatar: 'flash', score: 1750, rank: 9, gamesPlayed: 31, winRate: 65 },
+  { id: '10', name: 'ArtGenius', avatar: 'heart', score: 1680, rank: 10, gamesPlayed: 24, winRate: 70 },
+  { id: 'current-user', name: 'You', avatar: 'happy', score: 1420, rank: 15, gamesPlayed: 18, winRate: 61 },
 ];
 
 const LeaderboardScreen: React.FC = () => {
@@ -52,7 +52,7 @@ const LeaderboardScreen: React.FC = () => {
       setIsLoading(true);
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // In real implementation, this would be an API call
       setLeaderboardData(mockLeaderboardData);
     } catch (error) {
@@ -100,7 +100,7 @@ const LeaderboardScreen: React.FC = () => {
 
   const renderLeaderboardItem = ({ item }: { item: LeaderboardPlayer }) => {
     const isUser = isCurrentUser(item.id);
-    
+
     return (
       <View
         style={[
@@ -132,6 +132,27 @@ const LeaderboardScreen: React.FC = () => {
           </Text>
         </View>
 
+        {/* Player Avatar - only show for current user with custom avatar */}
+        {isUser ? (
+          <UserAvatar
+            avatarData={user?.avatarData}
+            size={40}
+            style={{ marginRight: spacing.md }}
+          />
+        ) : (
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: theme.primary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: spacing.md,
+            }}
+          />
+        )}
+
         {/* Player Info */}
         <View style={styles.playerInfo}>
           <View style={styles.nameContainer}>
@@ -141,7 +162,7 @@ const LeaderboardScreen: React.FC = () => {
               color={isUser ? theme.primary : theme.text}
               style={{ fontWeight: isUser ? 'bold' : 'normal' }}
             >
-              {item.avatar} {item.name}
+              {item.name}
               {isUser && (
                 <Text
                   variant="body"
@@ -241,14 +262,14 @@ const LeaderboardScreen: React.FC = () => {
         >
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        
+
         <Text
           variant="heading"
           size={typography.fontSizes.xl}
         >
           Leaderboard
         </Text>
-        
+
         <View style={{ width: 40 }} />
       </View>
 

@@ -24,8 +24,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="amazonian"/>
-        <data android:scheme="exp+amazonian"/>
+        <data android:scheme="skrawl"/>
+        <data android:scheme="exp+skrawl"/>
       </intent-filter>
     </activity>
   </application>

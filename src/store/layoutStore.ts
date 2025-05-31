@@ -36,7 +36,7 @@ export const useLayoutStore = create<LayoutState>()(
       }),
     }),
     {
-      name: 'amazonian-layout-preferences',
+      name: 'skrawl-layout-preferences',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

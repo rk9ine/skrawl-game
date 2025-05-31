@@ -279,7 +279,7 @@ export const useAuthStore = create<AuthState>()(
   },
 }),
     {
-      name: 'amazonian-user-data',
+      name: 'skrawl-user-data',
       storage: createJSONStorage(() => AsyncStorage),
       // Only persist these fields
       partialize: (state) => ({

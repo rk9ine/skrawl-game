@@ -74,7 +74,7 @@ const LoginScreen = () => {
               color={theme.primary}
               style={styles.appTitle}
             >
-              Amazonian
+              Skrawl
             </Text>
             <Text
               variant="body"

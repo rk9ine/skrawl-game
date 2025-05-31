@@ -25,16 +25,16 @@ const sampleSvgPaths = [
 const generateRandomSvg = (): string => {
   const numPaths = Math.floor(Math.random() * 5) + 1;
   const colors = ['#4361EE', '#FF6B6B', '#4CAF50', '#FFC107', '#F44336', '#2196F3'];
-  
+
   let svgData = '';
   for (let i = 0; i < numPaths; i++) {
     const pathIndex = Math.floor(Math.random() * sampleSvgPaths.length);
     const colorIndex = Math.floor(Math.random() * colors.length);
     const strokeWidth = Math.floor(Math.random() * 5) + 1;
-    
+
     svgData += `<path d="${sampleSvgPaths[pathIndex]}" stroke="${colors[colorIndex]}" stroke-width="${strokeWidth}" fill="none" />`;
   }
-  
+
   return svgData;
 };
 
@@ -42,8 +42,8 @@ export const mockDrawings: MockDrawing[] = [
   {
     id: 'drawing-1',
     userId: 'user-1',
-    title: 'Amazon Rainforest',
-    description: 'A drawing of the Amazon rainforest with various animals',
+    title: 'Tropical Rainforest',
+    description: 'A drawing of a tropical rainforest with various animals',
     svgData: generateRandomSvg(),
     createdAt: '2025-03-15T10:30:00Z',
     updatedAt: '2025-03-15T10:45:00Z',
@@ -55,7 +55,7 @@ export const mockDrawings: MockDrawing[] = [
     id: 'drawing-2',
     userId: 'user-1',
     title: 'Tropical Bird',
-    description: 'A colorful tropical bird from the Amazon',
+    description: 'A colorful tropical bird from the rainforest',
     svgData: generateRandomSvg(),
     createdAt: '2025-03-16T14:20:00Z',
     updatedAt: '2025-03-16T14:35:00Z',

@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
-import { Text } from '../ui';
+import { Text, CustomIcon } from '../ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 
 interface TopBarProps {
@@ -223,7 +222,7 @@ const TopBar: React.FC<TopBarProps> = ({
           ]}
           onPress={onOpenSettings}
         >
-          <Ionicons name="settings-outline" size={20} color={themeContext.text} />
+          <CustomIcon name="settings" size={20} color={themeContext.text} />
         </TouchableOpacity>
       </View>
     </View>

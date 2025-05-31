@@ -18,6 +18,7 @@ import SkiaCanvasTestScreen from '../screens/main/SkiaCanvasTestScreen';
 import LeaderboardScreen from '../screens/main/LeaderboardScreen';
 import AvatarSelectionScreen from '../screens/main/AvatarSelectionScreen';
 
+
 // Loading Screen
 import LoadingScreen from '../screens/LoadingScreen';
 

@@ -142,11 +142,8 @@
 
     * **Brush Size:** Allow the artist to select a stroke thickness (e.g. small, medium, large brush). This setting is included in the drawing data so that strokes are rendered with the correct width on all clients.
     * **Color Palette:** Provide a palette of colors for the brush. When the artist selects a new color, subsequent strokes use that color. The color choice can be conveyed either implicitly (if the artist’s client just sends colored pixels/lines) or by sending a color code along with draw events (e.g. `{ color: "#FF0000", points: [...] }`). All clients should apply the same color to the incoming strokes.
-  * **Eraser:** A tool to erase parts of the drawing. The eraser can be implemented in two ways:
-
-    * Simplest: treat the eraser as just another brush color that matches the background (white), essentially drawing white lines to cover mistakes. This approach means erasing is broadcast as just drawing with “white” color, so all clients mirror it.
-    * More complex: if you maintain a vector of drawn strokes, an eraser could remove specific strokes or segments. But given the real-time nature, the first approach is sufficient.
-    * Eraser size can also be selectable (often using the same size as brush).
+  * 
+    
   * **Fill (Bucket) Tool:** *(Optional)* Fills a contiguous area with a selected color, like paint bucket. If implemented, when the artist taps the fill tool and then taps the canvas:
 
     * On the artist’s client, perform a flood-fill algorithm from that point, replacing the area’s color with the chosen color.

@@ -12,12 +12,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList, RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
-import { Text, SafeAreaContainer } from '../../components/ui';
+import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
 
 type DashboardScreenNavigationProp = NativeStackNavigationProp<
   MainStackParamList & RootStackParamList
@@ -186,7 +185,7 @@ const DashboardScreen = () => {
           activeOpacity={0.7}
         >
           <View style={[styles.cardIconContainer, { backgroundColor: item.iconBgColor }]}>
-            <Ionicons name={item.icon as any} size={32} color={item.iconColor} />
+            <CustomIcon name={item.icon as any} size={32} color={item.iconColor} />
           </View>
           <View style={styles.cardContent}>
             <Text
@@ -216,7 +215,7 @@ const DashboardScreen = () => {
           variant="heading"
           size={typography.fontSizes.xxxl}
         >
-          Amazonian
+          Skrawl
         </Text>
 
         <TouchableOpacity
@@ -230,7 +229,7 @@ const DashboardScreen = () => {
           ]}
           onPress={handleNavigateToSettings}
         >
-          <Ionicons name="settings-outline" size={24} color={theme.text} />
+          <CustomIcon name="settings" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 
@@ -251,7 +250,7 @@ const DashboardScreen = () => {
             size={typography.fontSizes.xl}
             style={{ marginBottom: spacing.xs, textAlign: 'center' }}
           >
-            Welcome to Amazonian
+            Welcome to Skrawl
           </Text>
 
           <Text
