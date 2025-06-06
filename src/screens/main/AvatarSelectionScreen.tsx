@@ -6,6 +6,7 @@ import {
   Platform,
   Animated,
   PanResponder,
+  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -174,6 +175,13 @@ const AvatarSelectionScreen = () => {
       justifyContent: 'center',
       alignItems: 'center',
     },
+    scrollContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: spacing.xl,
+    },
     content: {
       flex: 1,
     },
@@ -300,7 +308,12 @@ const AvatarSelectionScreen = () => {
         <View style={{ width: 44 }} />
       </View>
 
-      <View style={[styles.content, { padding: spacing.lg }]}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.titleSection}>
           <Text
             variant="subtitle"
@@ -563,7 +576,7 @@ const AvatarSelectionScreen = () => {
             </>
           )}
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaContainer>
   );
 };

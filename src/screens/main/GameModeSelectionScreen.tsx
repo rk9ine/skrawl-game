@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Platform,
   Animated,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -106,8 +107,8 @@ const GameModeSelectionScreen = () => {
   };
 
   const handleCustomGame = () => {
-    // Navigate to avatar selection (without fromProfileEdit flag)
-    navigation.navigate('AvatarSelection');
+    // Navigate to Drawing Battle with Private Mode overlay
+    navigation.navigate('DrawingBattle', { privateMode: true });
   };
 
   return (
@@ -137,16 +138,21 @@ const GameModeSelectionScreen = () => {
         <View style={{ width: 44 }} />
       </View>
 
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            padding: spacing.lg,
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
+        <Animated.View
+          style={[
+            styles.animatedContent,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
         {/* Current User Info Section */}
         <View style={styles.userInfoSection}>
           <Text
@@ -297,13 +303,14 @@ const GameModeSelectionScreen = () => {
                 color="#FFFFFF"
                 style={styles.cardDescription}
               >
-                Choose a different avatar for this game session
+                Set up a private match with custom settings
               </Text>
             </View>
             <CustomIcon name="chevron-forward" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      </Animated.View>
+        </Animated.View>
+      </ScrollView>
     </SafeAreaContainer>
   );
 };
@@ -322,6 +329,16 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  animatedContent: {
+    flex: 1,
   },
   content: {
     flex: 1,

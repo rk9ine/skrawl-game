@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { Text, SafeAreaContainer, CustomIcon, DeleteAccountModal } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { MainStackParamList } from '../../types/navigation';
+import ProfileDebugPanel from '../../components/debug/ProfileDebugPanel';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -21,7 +23,9 @@ const SettingsScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows, isDark, setThemeType, themeType } = useTheme();
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const { user, profile, signOut, resetUserProfile, deleteAccount, isLoading } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Create basic styles without theme values
   const styles = StyleSheet.create({
@@ -498,6 +502,66 @@ const SettingsScreen = () => {
           </View>
         </View>
 
+        {/* Debug Section (Development Only) */}
+        {__DEV__ && (
+          <View style={[styles.section, { marginBottom: spacing.lg }]}>
+            <Text
+              variant="title"
+              bold
+              size={typography.fontSizes.lg}
+              style={{ marginBottom: spacing.sm }}
+            >
+              Debug (Dev Only)
+            </Text>
+
+            <View style={[
+              styles.card,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+                borderRadius: borderRadius.xl,
+                borderWidth: 1,
+                ...applyThemeShadow('sm')
+              }
+            ]}>
+              <TouchableOpacity
+                style={[
+                  styles.settingRow,
+                  {
+                    padding: spacing.md
+                  }
+                ]}
+                onPress={() => setShowDebugPanel(true)}
+              >
+                <View style={styles.settingInfo}>
+                  <Text style={[
+                    styles.settingTitle,
+                    {
+                      fontFamily: typography.fontFamily.primary,
+                      color: theme.text,
+                      fontSize: typography.fontSizes.md
+                    }
+                  ]}>
+                    Profile Debug Panel
+                  </Text>
+                  <Text style={[
+                    {
+                      fontFamily: typography.fontFamily.primary,
+                      color: theme.textSecondary,
+                      fontSize: typography.fontSizes.sm,
+                      marginTop: spacing.xxs
+                    }
+                  ]}>
+                    Test profile setup functionality
+                  </Text>
+                </View>
+
+                <CustomIcon name="chevron-forward" size={20} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* About Section */}
         <View style={[styles.section, { marginBottom: spacing.lg }]}>
           <Text
@@ -561,6 +625,42 @@ const SettingsScreen = () => {
         displayName={profile?.displayName || 'Unknown'}
         isDeleting={isLoading}
       />
+
+      {/* Debug Panel Modal */}
+      {__DEV__ && showDebugPanel && (
+        <View style={{
+          position: 'absolute',
+          top: insets.top, // Respect safe area top inset
+          left: 0,
+          right: 0,
+          bottom: insets.bottom, // Respect safe area bottom inset
+          backgroundColor: theme.background,
+          zIndex: 1000,
+        }}>
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: spacing.md,
+            backgroundColor: theme.backgroundAlt,
+          }}>
+            <Text variant="heading" size={typography.fontSizes.lg}>
+              Profile Debug
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDebugPanel(false)}
+              style={{
+                padding: spacing.xs,
+                backgroundColor: theme.background,
+                borderRadius: borderRadius.md,
+              }}
+            >
+              <CustomIcon name="close" size={24} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+          <ProfileDebugPanel />
+        </View>
+      )}
     </SafeAreaContainer>
   );
 };

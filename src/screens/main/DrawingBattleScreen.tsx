@@ -7,7 +7,8 @@ import {
   ScaledSize,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { MainStackParamList } from '../../types/navigation';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useAuthStore } from '../../store/authStore';
@@ -21,13 +22,20 @@ import {
   TopBar,
   SettingsModal,
   ReactionOverlay,
+  PrivateModeOverlay,
 } from '../../components/drawing-battle';
+
+type DrawingBattleScreenRouteProp = RouteProp<MainStackParamList, 'DrawingBattle'>;
 
 const DrawingBattleScreen = () => {
   const { theme, spacing } = useTheme();
   const navigation = useNavigation();
+  const route = useRoute<DrawingBattleScreenRouteProp>();
   const { chatInputPosition, useSystemKeyboard } = useLayoutStore();
   const { user, profile } = useAuthStore();
+
+  // Get route parameters
+  const { privateMode = false } = route.params || {};
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -101,6 +109,7 @@ const DrawingBattleScreen = () => {
 
   // State
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
+  const [isPrivateModeOverlayVisible, setIsPrivateModeOverlayVisible] = useState(privateMode);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [currentRound, setCurrentRound] = useState(1);
   const [currentWord, setCurrentWord] = useState('house');
@@ -401,6 +410,21 @@ const DrawingBattleScreen = () => {
     // and broadcast to all players
   };
 
+  // Private Mode handlers
+  const handleDismissPrivateMode = () => {
+    setIsPrivateModeOverlayVisible(false);
+  };
+
+  const handleStartPrivateGame = (config: any) => {
+    console.log('Starting private game with config:', config);
+    // TODO: Implement private game logic
+    setIsPrivateModeOverlayVisible(false);
+    // Here you would typically:
+    // 1. Create the private room with the configuration
+    // 2. Generate and share the room code
+    // 3. Start the game session
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
       {/* Status Bar Spacer - ensures consistent spacing on both platforms */}
@@ -495,6 +519,13 @@ const DrawingBattleScreen = () => {
         visible={isSettingsModalVisible}
         onClose={() => setIsSettingsModalVisible(false)}
         onExit={onExit}
+      />
+
+      {/* Private Mode Overlay */}
+      <PrivateModeOverlay
+        visible={isPrivateModeOverlayVisible}
+        onDismiss={handleDismissPrivateMode}
+        onStartGame={handleStartPrivateGame}
       />
     </SafeAreaView>
   );

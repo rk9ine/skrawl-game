@@ -5,7 +5,7 @@ export type AuthStackParamList = {
 
 export type MainStackParamList = {
   Dashboard: undefined;
-  DrawingBattle: undefined;
+  DrawingBattle: { privateMode?: boolean };
   PrivateMatch: { matchId?: string };
   Settings: undefined;
   SkiaCanvasTest: undefined;

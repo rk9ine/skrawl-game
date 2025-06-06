@@ -296,18 +296,22 @@ const ProfileSetupScreen = () => {
           <View style={{ width: 44 }} />
         </View>
 
-        <Animated.View
-          style={[
-            styles.content,
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={[
+            styles.scrollContent,
             {
               padding: spacing.md,
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }
           ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Compact Profile Setup UI */}
-          <View style={styles.compactContainer}>
+          <Animated.View style={styles.animatedContent}>
+            {/* Compact Profile Setup UI */}
+            <View style={styles.compactContainer}>
             <View style={styles.welcomeSection}>
               <Text
                 variant="title"
@@ -518,7 +522,8 @@ const ProfileSetupScreen = () => {
               )}
             </TouchableOpacity>
           </View>
-        </Animated.View>
+          </Animated.View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaContainer>
   );
@@ -539,13 +544,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
+  scrollContainer: {
     flex: 1,
-    flexDirection: 'column',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: '100%',
+  },
+  animatedContent: {
+    flex: 1,
   },
   compactContainer: {
     flex: 1,
     justifyContent: 'space-between',
+    minHeight: 500, // Minimum height to ensure proper spacing
   },
   welcomeSection: {
     alignItems: 'center',

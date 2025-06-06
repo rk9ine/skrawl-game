@@ -1,27 +1,65 @@
 import { create } from 'zustand';
+import { gameService, GameWithParticipants } from '../services/gameService';
 
-// Game interface - will be updated when real game service is implemented
+// Helper function to transform game data from service to store format
+const transformGameData = (gameWithParticipants: GameWithParticipants): Game => ({
+  id: gameWithParticipants.id,
+  roomCode: gameWithParticipants.room_code,
+  hostId: gameWithParticipants.host_id,
+  gameMode: gameWithParticipants.game_mode,
+  maxPlayers: gameWithParticipants.max_players,
+  currentPlayers: gameWithParticipants.current_players,
+  status: gameWithParticipants.status,
+  currentRound: gameWithParticipants.current_round,
+  maxRounds: gameWithParticipants.max_rounds,
+  roundDuration: gameWithParticipants.round_duration,
+  currentDrawerId: gameWithParticipants.current_drawer_id,
+  currentWord: gameWithParticipants.current_word,
+  createdAt: gameWithParticipants.created_at,
+  updatedAt: gameWithParticipants.updated_at,
+  players: gameWithParticipants.participants.map(p => ({
+    id: p.id,
+    userId: p.user_id,
+    displayName: p.display_name,
+    score: p.score,
+    hasGuessedCorrectly: p.has_guessed_correctly,
+    joinedAt: p.joined_at,
+  })),
+});
+
+// Game interface - updated to match database schema
 interface Game {
   id: string;
-  name: string;
-  description: string;
-  creatorId: string;
+  roomCode: string;
+  hostId: string;
+  gameMode: 'classic' | 'drawing_battle';
+  maxPlayers: number;
+  currentPlayers: number;
+  status: 'waiting' | 'in_progress' | 'finished';
+  currentRound: number;
+  maxRounds: number;
+  roundDuration: number;
+  currentDrawerId?: string;
+  currentWord?: string;
+  createdAt: string;
+  updatedAt: string;
   players: Array<{
     id: string;
+    userId: string;
     displayName: string;
     score: number;
-    isReady: boolean;
+    hasGuessedCorrectly: boolean;
+    joinedAt: string;
   }>;
+}
+
+// Interface for creating a new game
+interface CreateGameData {
+  gameMode: 'classic' | 'drawing_battle';
   maxPlayers: number;
-  status: 'waiting' | 'playing' | 'finished';
-  currentRound: number;
-  totalRounds: number;
-  timePerRound: number;
-  createdAt: string;
+  maxRounds: number;
+  roundDuration: number;
   isPublic: boolean;
-  theme: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  gameCode?: string;
 }
 
 interface GameState {
@@ -29,45 +67,44 @@ interface GameState {
   publicGames: Game[];
   currentGame: Game | null;
   isLoading: boolean;
-  
+  error: string | null;
+
   // Game creation
-  gameName: string;
-  gameDescription: string;
+  gameMode: 'classic' | 'drawing_battle';
   maxPlayers: number;
-  totalRounds: number;
-  timePerRound: number;
+  maxRounds: number;
+  roundDuration: number;
   isPublic: boolean;
-  theme: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  
+
   // Game code for joining private games
   gameCode: string;
-  
+
   // Current game state
   currentPrompt: string;
-  
+
   // Actions - Game listings
   loadPublicGames: () => Promise<void>;
-  joinGame: (gameId: string) => Promise<boolean>;
-  joinPrivateGame: (gameCode: string) => Promise<boolean>;
-  
+  joinGame: (gameId: string, userId: string) => Promise<boolean>;
+  joinPrivateGame: (gameCode: string, userId: string) => Promise<boolean>;
+  leaveGame: (gameId: string, userId: string) => Promise<boolean>;
+
   // Actions - Game creation
-  setGameName: (name: string) => void;
-  setGameDescription: (description: string) => void;
+  setGameMode: (gameMode: 'classic' | 'drawing_battle') => void;
   setMaxPlayers: (maxPlayers: number) => void;
-  setTotalRounds: (totalRounds: number) => void;
-  setTimePerRound: (timePerRound: number) => void;
+  setMaxRounds: (maxRounds: number) => void;
+  setRoundDuration: (roundDuration: number) => void;
   setIsPublic: (isPublic: boolean) => void;
-  setTheme: (theme: string) => void;
-  setDifficulty: (difficulty: 'easy' | 'medium' | 'hard') => void;
   createGame: (userId: string) => Promise<Game | null>;
-  
+
   // Actions - Game code
   setGameCode: (code: string) => void;
-  
+
   // Actions - Game state
-  getRandomPrompt: () => Promise<string>;
+  getRandomPrompt: (difficulty?: 'easy' | 'medium' | 'hard') => Promise<string>;
   setCurrentPrompt: (prompt: string) => void;
+
+  // Actions - Error handling
+  clearError: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -75,138 +112,203 @@ export const useGameStore = create<GameState>((set, get) => ({
   publicGames: [],
   currentGame: null,
   isLoading: false,
-  
-  // Game creation
-  gameName: '',
-  gameDescription: '',
-  maxPlayers: 4,
-  totalRounds: 5,
-  timePerRound: 60,
+  error: null,
+
+  // Game creation settings
+  gameMode: 'classic',
+  maxPlayers: 8,
+  maxRounds: 3,
+  roundDuration: 80,
   isPublic: true,
-  theme: '',
-  difficulty: 'medium',
-  
+
   // Game code for joining private games
   gameCode: '',
-  
+
   // Current game state
   currentPrompt: '',
   
   // Actions - Game listings
   loadPublicGames: async () => {
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
 
-      // TODO: Implement real game service
-      console.log('Game service not implemented yet');
+      const games = await gameService.loadPublicGames();
+
+      // Transform the data to match our Game interface
+      const transformedGames: Game[] = games.map(transformGameData);
 
       set({
-        publicGames: [],
+        publicGames: transformedGames,
         isLoading: false,
       });
     } catch (error) {
       console.error('Error loading public games:', error);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load public games'
+      });
     }
   },
   
-  joinGame: async (gameId) => {
+  joinGame: async (gameId: string, userId: string) => {
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
 
-      // TODO: Implement real game service
-      console.log('Game service not implemented yet');
+      const gameWithParticipants = await gameService.joinGame(gameId, userId);
 
-      set({
-        isLoading: false,
-        currentGame: null,
-      });
+      if (gameWithParticipants) {
+        const transformedGame = transformGameData(gameWithParticipants);
 
-      return false;
+        set({
+          currentGame: transformedGame,
+          isLoading: false,
+        });
+
+        return true;
+      } else {
+        set({
+          isLoading: false,
+          error: 'Failed to join game'
+        });
+        return false;
+      }
     } catch (error) {
       console.error('Error joining game:', error);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to join game'
+      });
       return false;
     }
   },
   
-  joinPrivateGame: async (gameCode) => {
+  joinPrivateGame: async (gameCode: string, userId: string) => {
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
 
-      // TODO: Implement real game service
-      console.log('Game service not implemented yet');
+      const gameWithParticipants = await gameService.joinPrivateGame(gameCode, userId);
 
-      set({
-        isLoading: false,
-        currentGame: null,
-      });
+      if (gameWithParticipants) {
+        const transformedGame = transformGameData(gameWithParticipants);
 
-      return false;
+        set({
+          currentGame: transformedGame,
+          isLoading: false,
+        });
+
+        return true;
+      } else {
+        set({
+          isLoading: false,
+          error: 'Failed to join private game'
+        });
+        return false;
+      }
     } catch (error) {
       console.error('Error joining private game:', error);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to join private game'
+      });
+      return false;
+    }
+  },
+
+  leaveGame: async (gameId: string, userId: string) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const success = await gameService.leaveGame(gameId, userId);
+
+      if (success) {
+        set({
+          currentGame: null,
+          isLoading: false,
+        });
+        return true;
+      } else {
+        set({
+          isLoading: false,
+          error: 'Failed to leave game'
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error leaving game:', error);
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to leave game'
+      });
       return false;
     }
   },
   
   // Actions - Game creation
-  setGameName: (name) => set({ gameName: name }),
+  setGameMode: (gameMode: 'classic' | 'drawing_battle') => set({ gameMode }),
+
+  setMaxPlayers: (maxPlayers: number) => set({ maxPlayers }),
+
+  setMaxRounds: (maxRounds: number) => set({ maxRounds }),
+
+  setRoundDuration: (roundDuration: number) => set({ roundDuration }),
+
+  setIsPublic: (isPublic: boolean) => set({ isPublic }),
   
-  setGameDescription: (description) => set({ gameDescription: description }),
-  
-  setMaxPlayers: (maxPlayers) => set({ maxPlayers }),
-  
-  setTotalRounds: (totalRounds) => set({ totalRounds }),
-  
-  setTimePerRound: (timePerRound) => set({ timePerRound }),
-  
-  setIsPublic: (isPublic) => set({ isPublic }),
-  
-  setTheme: (theme) => set({ theme }),
-  
-  setDifficulty: (difficulty) => set({ difficulty }),
-  
-  createGame: async (userId) => {
+  createGame: async (userId: string) => {
     const {
-      gameName,
-      gameDescription,
+      gameMode,
       maxPlayers,
-      totalRounds,
-      timePerRound,
+      maxRounds,
+      roundDuration,
       isPublic,
-      theme,
-      difficulty,
     } = get();
 
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, error: null });
 
-      // TODO: Implement real game service
-      console.log('Game service not implemented yet');
+      const gameData: CreateGameData = {
+        gameMode,
+        maxPlayers,
+        maxRounds,
+        roundDuration,
+        isPublic,
+      };
 
-      set({
-        isLoading: false,
-        currentGame: null,
-      });
+      const gameWithParticipants = await gameService.createGame(userId, gameData);
 
-      return null;
+      if (gameWithParticipants) {
+        const transformedGame = transformGameData(gameWithParticipants);
+
+        set({
+          currentGame: transformedGame,
+          isLoading: false,
+        });
+
+        return transformedGame;
+      } else {
+        set({
+          isLoading: false,
+          error: 'Failed to create game'
+        });
+        return null;
+      }
     } catch (error) {
       console.error('Error creating game:', error);
-      set({ isLoading: false });
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to create game'
+      });
       return null;
     }
   },
   
   // Actions - Game code
-  setGameCode: (code) => set({ gameCode: code }),
-  
+  setGameCode: (code: string) => set({ gameCode: code }),
+
   // Actions - Game state
-  getRandomPrompt: async () => {
+  getRandomPrompt: async (difficulty?: 'easy' | 'medium' | 'hard') => {
     try {
-      // TODO: Implement real game service
-      console.log('Game service not implemented yet');
-      const prompt = '';
+      const prompt = await gameService.getRandomWord(difficulty);
       set({ currentPrompt: prompt });
       return prompt;
     } catch (error) {
@@ -214,6 +316,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       return '';
     }
   },
-  
-  setCurrentPrompt: (prompt) => set({ currentPrompt: prompt }),
+
+  setCurrentPrompt: (prompt: string) => set({ currentPrompt: prompt }),
+
+  // Actions - Error handling
+  clearError: () => set({ error: null }),
 }));

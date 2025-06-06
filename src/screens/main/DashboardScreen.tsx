@@ -276,7 +276,7 @@ const DashboardScreen = () => {
           numColumns={getNumColumns()}
           key={`grid-${getNumColumns()}`} // Force re-render when columns change
           contentContainerStyle={styles.gridContainer}
-          scrollEnabled={false}
+          scrollEnabled={true} // Enable scrolling as fallback for small screens
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={getNumColumns() > 1 ? styles.row : undefined}
         />

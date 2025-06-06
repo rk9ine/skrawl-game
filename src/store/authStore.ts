@@ -82,6 +82,8 @@ export const useAuthStore = create<AuthState>()(
       // Check profile completion status
       checkProfileStatus: async (user: User) => {
         try {
+          console.log('🔍 Checking profile status for user:', user.id);
+
           const { data, error } = await supabase
             .from('users')
             .select(`
@@ -98,9 +100,31 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (error) {
+            console.log('❌ Profile check error:', error);
+
             if (error.code === 'PGRST116') {
-              // User not found in database - create default profile
-              console.log('User not found in database, creating default profile');
+              // User not found in database - create profile record
+              console.log('👤 User not found in database, creating profile record');
+
+              try {
+                const { error: insertError } = await supabase
+                  .from('users')
+                  .insert({
+                    id: user.id,
+                    email: user.email || '',
+                    has_completed_profile_setup: false,
+                  });
+
+                if (insertError) {
+                  console.error('❌ Failed to create user profile:', insertError);
+                } else {
+                  console.log('✅ User profile created successfully');
+                }
+              } catch (insertError) {
+                console.error('❌ Exception creating user profile:', insertError);
+              }
+
+              // Set fallback profile state
               const profile: UserProfile = {
                 id: user.id,
                 email: user.email || '',
@@ -119,7 +143,7 @@ export const useAuthStore = create<AuthState>()(
               });
             } else {
               // Other database error - log and create fallback profile
-              console.error('Profile check error:', error);
+              console.error('❌ Database error during profile check:', error);
               const profile: UserProfile = {
                 id: user.id,
                 email: user.email || '',
@@ -140,6 +164,12 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
+          console.log('✅ Profile data retrieved:', {
+            hasProfile: !!data,
+            displayName: data?.display_name,
+            hasCompletedSetup: data?.has_completed_profile_setup
+          });
+
           const profile: UserProfile = {
             id: user.id,
             email: user.email || '',
@@ -152,13 +182,16 @@ export const useAuthStore = create<AuthState>()(
             displayNameLocked: data?.display_name_locked || false,
           };
 
+          const needsSetup = !profile.hasCompletedProfileSetup || !profile.displayName;
+          console.log('🎯 Profile setup needed:', needsSetup);
+
           // Update profile and needsProfileSetup state
           set({
             profile,
-            needsProfileSetup: !profile.hasCompletedProfileSetup
+            needsProfileSetup: needsSetup
           });
         } catch (error) {
-          console.error('Profile status check failed:', error);
+          console.error('❌ Profile status check failed with exception:', error);
           // Create fallback profile on any error
           const profile: UserProfile = {
             id: user.id,
@@ -182,33 +215,55 @@ export const useAuthStore = create<AuthState>()(
       // Initialize auth state
       initialize: async () => {
         try {
+          console.log('🚀 Starting auth initialization...');
+
           // Prevent multiple initializations
           const { isInitialized } = get();
           if (isInitialized) {
-            console.log('Auth already initialized, skipping...');
+            console.log('✅ Auth already initialized, skipping...');
             return;
           }
 
           // Clean up any existing auth listener
           const currentListener = get()._authListener;
           if (currentListener) {
+            console.log('🧹 Cleaning up existing auth listener...');
             currentListener();
           }
 
           // Get current session
+          console.log('🔍 Getting current session...');
           const { data: { session } } = await supabase.auth.getSession();
+          console.log('📋 Session result:', {
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            userEmail: session?.user?.email
+          });
 
           if (session?.user) {
+            console.log('👤 User found, checking profile status...');
             // Check profile status
             await get().checkProfileStatus(session.user);
+          } else {
+            console.log('❌ No user session found');
           }
 
           const { user, profile } = get();
+          const needsSetup = !!(session?.user && (!profile || !profile.hasCompletedProfileSetup || !profile.displayName));
+
+          console.log('🎯 Final auth state:', {
+            hasUser: !!user,
+            hasProfile: !!profile,
+            profileCompleted: profile?.hasCompletedProfileSetup,
+            displayName: profile?.displayName,
+            needsSetup
+          });
+
           set({
             session,
             user: session?.user ?? null,
             isInitialized: true,
-            needsProfileSetup: !!(session?.user && (!profile || !profile.hasCompletedProfileSetup))
+            needsProfileSetup: needsSetup
           });
 
           // Set up auth state change listener (only once)

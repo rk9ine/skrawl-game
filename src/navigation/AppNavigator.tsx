@@ -26,16 +26,19 @@ const AppNavigator = () => {
   // Use more specific selectors to avoid unnecessary re-renders
   const session = useAuthStore((state) => state.session);
   const needsProfileSetup = useAuthStore((state) => state.needsProfileSetup);
+  const profile = useAuthStore((state) => state.profile);
 
-  // Debug logging to see what's happening (only log on state changes)
-  // Temporarily disabled to reduce noise
-  // React.useEffect(() => {
-  //   console.log('🧭 AppNavigator - Auth State:', {
-  //     hasSession: !!session,
-  //     userEmail: session?.user?.email,
-  //     needsProfileSetup,
-  //   });
-  // }, [session, needsProfileSetup]);
+  // Debug logging to see what's happening
+  React.useEffect(() => {
+    console.log('🧭 AppNavigator - Auth State:', {
+      hasSession: !!session,
+      userEmail: session?.user?.email,
+      needsProfileSetup,
+      hasProfile: !!profile,
+      profileCompleted: profile?.hasCompletedProfileSetup,
+      displayName: profile?.displayName,
+    });
+  }, [session, needsProfileSetup, profile]);
 
   return (
     <NavigationContainer>
