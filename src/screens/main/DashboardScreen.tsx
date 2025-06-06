@@ -16,7 +16,7 @@ import { MainStackParamList, RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
-import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
+import { Text, SafeAreaContainer, CustomIcon, UserAvatar } from '../../components/ui';
 
 type DashboardScreenNavigationProp = NativeStackNavigationProp<
   MainStackParamList & RootStackParamList
@@ -40,7 +40,7 @@ interface FeatureCard {
 const DashboardScreen = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation<DashboardScreenNavigationProp>();
-  const { user, isSkipped } = useAuthStore();
+  const { user, profile, isSkipped } = useAuthStore();
   const { width, height } = useWindowDimensions();
 
   // Animation values
@@ -97,7 +97,7 @@ const DashboardScreen = () => {
       icon: 'people',
       iconColor: theme.primary,
       iconBgColor: theme.primary + '20',
-      navigateTo: 'DrawingBattle',
+      navigateTo: 'GameModeSelection',
       requiresAuth: true,
     },
     {
@@ -222,14 +222,20 @@ const DashboardScreen = () => {
           style={[
             styles.settingsButton,
             {
-              backgroundColor: theme.backgroundAlt,
+              backgroundColor: 'transparent',
               borderRadius: borderRadius.round / 2,
-              ...applyThemeShadow('sm')
             }
           ]}
           onPress={handleNavigateToSettings}
         >
-          <CustomIcon name="settings" size={24} color={theme.text} />
+          <UserAvatar
+            avatarData={profile?.avatar}
+            size={42}
+            style={{
+              borderRadius: 21,
+              ...applyThemeShadow('sm')
+            }}
+          />
         </TouchableOpacity>
       </View>
 

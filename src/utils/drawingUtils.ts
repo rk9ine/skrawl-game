@@ -1,4 +1,9 @@
-import { Point, StrokePoint } from '../types';
+import { Point } from '../types/drawing';
+
+// Define StrokePoint interface locally since it's not exported
+interface StrokePoint extends Point {
+  time: number;
+}
 
 /**
  * Calculates the distance between two points

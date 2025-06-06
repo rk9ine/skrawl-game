@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { DrawingPlayer } from '../types/drawing';
 import { generateUUID } from '../utils/uuidUtils';
-import { currentMockUser } from '../mock/users';
 
 interface MultiplayerDrawingState {
   // Players in the session
@@ -23,40 +22,23 @@ interface MultiplayerDrawingState {
   setIsConnected: (isConnected: boolean) => void;
 }
 
-// Default current player based on mock user
+// Default current player - will be updated with real user data
 const defaultCurrentPlayer: DrawingPlayer = {
-  id: currentMockUser?.id || 'local-player',
-  name: currentMockUser?.displayName || 'You',
+  id: 'local-player',
+  name: 'You',
   color: '#4361EE',
-  avatar: currentMockUser?.avatar || '🎨',
+  avatar: '🎨',
   isActive: true,
   isDrawing: true,
 };
 
-// Mock players for testing
-const mockPlayers: DrawingPlayer[] = [
-  {
-    id: 'player-1',
-    name: 'Player 1',
-    color: '#FF5733',
-    avatar: '😀',
-    isActive: true,
-    isDrawing: false,
-  },
-  {
-    id: 'player-2',
-    name: 'Player 2',
-    color: '#33FF57',
-    avatar: '🎮',
-    isActive: true,
-    isDrawing: false,
-  },
-];
+// Empty players array - will be populated with real multiplayer data
+const initialPlayers: DrawingPlayer[] = [];
 
 export const useMultiplayerDrawingStore = create<MultiplayerDrawingState>((set, get) => ({
   // Initial state
   currentPlayer: defaultCurrentPlayer,
-  players: mockPlayers,
+  players: initialPlayers,
   sessionId: generateUUID(),
   isConnected: false,
 

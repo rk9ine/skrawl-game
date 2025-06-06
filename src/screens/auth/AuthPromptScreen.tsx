@@ -19,10 +19,10 @@ const AuthPromptScreen = () => {
 
   const { redirectTo } = route.params;
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     // Sign out the skipped user first, which will trigger the navigation condition
     // in AppNavigator to show the Auth screen
-    await signOut();
+    signOut();
   };
 
   const handleCancel = () => {

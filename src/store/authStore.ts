@@ -1,291 +1,499 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MockUser } from '../mock';
-import { authApi } from '../services/mockApi';
+import { supabase, authConfig } from '../services/supabase';
+import { Session, User } from '@supabase/supabase-js';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
+import { AccountDeletionService } from '../services/accountDeletionService';
+
+// User profile interface
+interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatar: string | null;
+  hasCompletedProfileSetup: boolean;
+  usernameChangesRemaining: number;
+  usernameChangeHistory: any[];
+  lastUsernameChange: string | null;
+  displayNameLocked: boolean;
+}
 
 interface AuthState {
-  user: MockUser | null;
+  // State
+  user: User | null;
+  session: Session | null;
+  profile: UserProfile | null;
   isLoading: boolean;
-  isSkipped: boolean;
-  // Store preserved profile data when user signs out
-  preservedProfileData?: {
-    displayName: string;
-    avatar?: string;
-    hasCompletedProfileSetup: boolean;
-  };
+  isInitialized: boolean;
+  lastUsedEmail: string | null;
 
-  // Auth actions
-  signInWithEmail: (email: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
-  skipAuth: () => void;
+  // Computed properties
+  needsProfileSetup: boolean;
 
-  // Session management
-  setUser: (user: MockUser | null) => void;
-  checkSession: () => Promise<void>;
+  // Actions
+  initialize: () => Promise<void>;
+  sendEmailOtp: (email: string) => Promise<{ error: any }>;
+  verifyEmailOtp: (email: string, token: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
+  updateProfile: (updates: { displayName: string; avatar: string }) => Promise<{ error: any }>;
+  signOut: (clearEmail?: boolean) => Promise<void>;
+  deleteAccount: () => Promise<{ error: any }>;
+  resetUserProfile: () => Promise<void>;
 
-  // Profile management
-  updateUserProfile: (profileData: Partial<MockUser>) => void;
-  resetUserProfile: () => void;
-  hasCompletedProfileSetup: () => boolean;
+  // Internal methods
+  checkProfileStatus: (user: User) => Promise<void>;
+
+  // Internal state for cleanup
+  _authListener?: () => void;
 }
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+  iosClientId: authConfig.googleOAuth.iosClientId,
+  webClientId: Platform.OS === 'android' ? authConfig.googleOAuth.androidClientId : undefined,
+});
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-  user: null,
-  isLoading: true,
-  isSkipped: false,
-  preservedProfileData: undefined,
-
-  signInWithEmail: async (email: string) => {
-    try {
-      const response = await authApi.signInWithEmail(email);
-
-      if (response.success) {
-        // Get the current state to check if we have any persisted profile data
-        const currentState = get();
-
-        // If we have preserved profile data from a previous session, use it
-        if (currentState.preservedProfileData) {
-          console.log('Found preserved profile data for email login:', currentState.preservedProfileData);
-
-          // If we have a user, update with preserved profile data
-          if (currentState.user) {
-            set({
-              user: {
-                ...currentState.user,
-                displayName: currentState.preservedProfileData.displayName,
-                avatar: currentState.preservedProfileData.avatar,
-                hasCompletedProfileSetup: currentState.preservedProfileData.hasCompletedProfileSetup
-              },
-              preservedProfileData: undefined // Clear preserved data
-            });
-          }
-        } else {
-          // For new users, set hasCompletedProfileSetup to false to trigger profile setup
-          if (currentState.user) {
-            const username = email.split('@')[0] || 'User';
-
-            set({
-              user: {
-                ...currentState.user,
-                displayName: username,
-                hasCompletedProfileSetup: false // Set to false to trigger profile setup
-              }
-            });
-
-            console.log('Email login: New user, profile setup required:', {
-              displayName: username,
-              hasCompletedProfileSetup: false
-            });
-          }
-        }
-
-        return { error: null };
-      } else {
-        return { error: new Error(response.message) };
-      }
-    } catch (error) {
-      console.error('Error signing in with email:', error);
-      return { error: error as Error };
-    }
-  },
-
-  signInWithGoogle: async () => {
-    try {
-      const response = await authApi.signInWithGoogle();
-
-      if (response.success && response.user) {
-        // Get the current state to check if we have any persisted profile data
-        const currentState = get();
-        console.log('Current state before sign in:', currentState);
-
-        // Check if we have preserved profile data from a previous session
-        if (currentState.preservedProfileData) {
-          console.log('Found preserved profile data:', currentState.preservedProfileData);
-
-          // Merge the new user data with the preserved profile data
-          set({
-            user: {
-              ...response.user,
-              displayName: currentState.preservedProfileData.displayName || response.user.displayName,
-              avatar: currentState.preservedProfileData.avatar || response.user.avatar,
-              hasCompletedProfileSetup: currentState.preservedProfileData.hasCompletedProfileSetup
-            },
-            isLoading: false,
-            // Clear the preserved profile data since we've used it
-            preservedProfileData: undefined
-          });
-        }
-        // If no preserved data but we have user data with hasCompletedProfileSetup
-        else if (currentState.user && currentState.user.hasCompletedProfileSetup) {
-          console.log('Using existing profile data from current session:', {
-            displayName: currentState.user.displayName,
-            avatar: currentState.user.avatar,
-            hasCompletedProfileSetup: currentState.user.hasCompletedProfileSetup
-          });
-
-          // Merge the new user data with the existing profile data
-          set({
-            user: {
-              ...response.user,
-              displayName: currentState.user.displayName || response.user.displayName,
-              avatar: currentState.user.avatar || response.user.avatar,
-              hasCompletedProfileSetup: currentState.user.hasCompletedProfileSetup
-            },
-            isLoading: false
-          });
-        } else {
-          // For new users, set hasCompletedProfileSetup to false to trigger profile setup
-          const username = response.user.email?.split('@')[0] || 'User';
-          console.log('New Google user, profile setup required:', {
-            displayName: username,
-            hasCompletedProfileSetup: false
-          });
-
-          set({
-            user: {
-              ...response.user,
-              displayName: username,
-              hasCompletedProfileSetup: false // Set to false to trigger profile setup
-            },
-            isLoading: false
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-    }
-  },
-
-  signOut: async () => {
-    try {
-      await authApi.signOut();
-
-      // Get the current user data before signing out
-      const currentState = get();
-      const userData = currentState.user;
-
-      console.log('Signing out, current user data:', userData);
-
-      // If the user has completed profile setup, preserve that data
-      if (userData && userData.hasCompletedProfileSetup) {
-        const profileData = {
-          displayName: userData.displayName,
-          avatar: userData.avatar,
-          hasCompletedProfileSetup: userData.hasCompletedProfileSetup
-        };
-        console.log('Preserving profile data for next sign-in:', profileData);
-
-        // Store the profile data in the preservedProfileData field
-        // and set user to null
-        set({
-          user: null,
-          isSkipped: false,
-          preservedProfileData: profileData
-        });
-      } else {
-        // Just set user to null
-        set({
-          user: null,
-          isSkipped: false
-        });
-      }
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  },
-
-  skipAuth: () => {
-    set({ isSkipped: true });
-  },
-
-  setUser: (user) => {
-    set({
-      user,
+      // Initial state
+      user: null,
+      session: null,
+      profile: null,
       isLoading: false,
-    });
-  },
+      isInitialized: false,
+      lastUsedEmail: null,
+      needsProfileSetup: false,
+      _authListener: undefined,
 
-  checkSession: async () => {
-    try {
-      set({ isLoading: true });
+      // Check profile completion status
+      checkProfileStatus: async (user: User) => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select(`
+              id,
+              display_name,
+              avatar_data,
+              has_completed_profile_setup,
+              username_changes_remaining,
+              username_change_history,
+              last_username_change,
+              display_name_locked
+            `)
+            .eq('id', user.id)
+            .single();
 
-      // Simulate a short delay to mimic a real API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+          if (error) {
+            if (error.code === 'PGRST116') {
+              // User not found in database - create default profile
+              console.log('User not found in database, creating default profile');
+              const profile: UserProfile = {
+                id: user.id,
+                email: user.email || '',
+                displayName: null,
+                avatar: null,
+                hasCompletedProfileSetup: false,
+                usernameChangesRemaining: 1,
+                usernameChangeHistory: [],
+                lastUsernameChange: null,
+                displayNameLocked: false,
+              };
 
-      // Get the current state to check if we have any persisted data
-      const currentState = get();
-      console.log('Checking session, current state:', currentState);
+              set({
+                profile,
+                needsProfileSetup: true
+              });
+            } else {
+              // Other database error - log and create fallback profile
+              console.error('Profile check error:', error);
+              const profile: UserProfile = {
+                id: user.id,
+                email: user.email || '',
+                displayName: null,
+                avatar: null,
+                hasCompletedProfileSetup: false,
+                usernameChangesRemaining: 1,
+                usernameChangeHistory: [],
+                lastUsernameChange: null,
+                displayNameLocked: false,
+              };
 
-      // Just set isLoading to false
-      // The user and preservedProfileData are already loaded from AsyncStorage
-      set({ isLoading: false });
-    } catch (error) {
-      console.error('Error checking session:', error);
-      set({ isLoading: false });
-    }
-  },
+              set({
+                profile,
+                needsProfileSetup: true
+              });
+            }
+            return;
+          }
 
-  // Profile management methods
-  updateUserProfile: (profileData) => {
-    const { user } = get();
-    if (user) {
-      // Update user profile with new data
-      set({
-        user: {
-          ...user,
-          ...profileData,
-        },
-      });
-    }
-  },
+          const profile: UserProfile = {
+            id: user.id,
+            email: user.email || '',
+            displayName: data?.display_name || null,
+            avatar: data?.avatar_data || null,
+            hasCompletedProfileSetup: data?.has_completed_profile_setup || false,
+            usernameChangesRemaining: data?.username_changes_remaining || 1,
+            usernameChangeHistory: data?.username_change_history || [],
+            lastUsernameChange: data?.last_username_change || null,
+            displayNameLocked: data?.display_name_locked || false,
+          };
 
-  resetUserProfile: () => {
-    const { user } = get();
-    if (user) {
-      // Reset profile data and set hasCompletedProfileSetup to false
-      // to trigger the profile setup screen
-      const username = user.email?.split('@')[0] || 'User';
-      set({
-        user: {
-          ...user,
-          displayName: username,
-          avatar: undefined, // Clear avatar
-          hasCompletedProfileSetup: false, // Set to false to trigger profile setup
-        },
-      });
+          // Update profile and needsProfileSetup state
+          set({
+            profile,
+            needsProfileSetup: !profile.hasCompletedProfileSetup
+          });
+        } catch (error) {
+          console.error('Profile status check failed:', error);
+          // Create fallback profile on any error
+          const profile: UserProfile = {
+            id: user.id,
+            email: user.email || '',
+            displayName: null,
+            avatar: null,
+            hasCompletedProfileSetup: false,
+            usernameChangesRemaining: 1,
+            usernameChangeHistory: [],
+            lastUsernameChange: null,
+            displayNameLocked: false,
+          };
 
-      console.log('Profile reset, setup required:', {
-        displayName: username,
-        avatar: undefined,
-        hasCompletedProfileSetup: false
-      });
-    }
-  },
+          set({
+            profile,
+            needsProfileSetup: true
+          });
+        }
+      },
 
-  hasCompletedProfileSetup: () => {
-    const { user } = get();
+      // Initialize auth state
+      initialize: async () => {
+        try {
+          // Prevent multiple initializations
+          const { isInitialized } = get();
+          if (isInitialized) {
+            console.log('Auth already initialized, skipping...');
+            return;
+          }
 
-    // If user doesn't exist, return false
-    if (!user) return false;
+          // Clean up any existing auth listener
+          const currentListener = get()._authListener;
+          if (currentListener) {
+            currentListener();
+          }
 
-    // For new users, hasCompletedProfileSetup might be undefined
-    // We want to explicitly check if it's true
-    // If it's undefined or false, we should return false
-    return user.hasCompletedProfileSetup === true;
-  },
-}),
+          // Get current session
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (session?.user) {
+            // Check profile status
+            await get().checkProfileStatus(session.user);
+          }
+
+          const { user, profile } = get();
+          set({
+            session,
+            user: session?.user ?? null,
+            isInitialized: true,
+            needsProfileSetup: !!(session?.user && (!profile || !profile.hasCompletedProfileSetup))
+          });
+
+          // Set up auth state change listener (only once)
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth event:', event);
+
+            try {
+              if (session?.user) {
+                // checkProfileStatus will handle updating profile and needsProfileSetup
+                await get().checkProfileStatus(session.user);
+                // Update session and user after profile check
+                set({
+                  session,
+                  user: session.user
+                });
+              } else {
+                // No session - clear everything
+                set({
+                  session: null,
+                  user: null,
+                  profile: null,
+                  needsProfileSetup: false
+                });
+              }
+            } catch (error) {
+              console.error('Auth state change error:', error);
+              // Ensure we still update the session state even if profile check fails
+              set({
+                session,
+                user: session?.user ?? null
+              });
+            }
+          });
+
+          // Store the cleanup function
+          set({ _authListener: () => subscription.unsubscribe() });
+        } catch (error) {
+          console.error('Auth initialization error:', error);
+          set({ isInitialized: true });
+        }
+      },
+
+      // Send email OTP
+      sendEmailOtp: async (email: string) => {
+        set({ isLoading: true });
+
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            shouldCreateUser: true,
+          },
+        });
+
+        // Save email for future use if OTP was sent successfully
+        if (!error) {
+          set({ lastUsedEmail: email });
+        }
+
+        set({ isLoading: false });
+        return { error };
+      },
+
+      // Verify email OTP
+      verifyEmailOtp: async (email: string, token: string) => {
+        set({ isLoading: true });
+
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'email',
+        });
+
+        set({ isLoading: false });
+        return { error };
+      },
+
+      // Google Sign-in
+      signInWithGoogle: async () => {
+        set({ isLoading: true });
+
+        try {
+          // Check if Google Play Services are available
+          await GoogleSignin.hasPlayServices();
+
+          // Get Google user info
+          const userInfo = await GoogleSignin.signIn();
+
+          if (!userInfo.data?.idToken) {
+            set({ isLoading: false });
+            return {
+              error: new Error('Failed to get Google ID token')
+            };
+          }
+
+          // Sign in with Supabase using Google ID token
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: userInfo.data.idToken,
+          });
+
+          if (error) {
+            set({ isLoading: false });
+            return { error };
+          }
+
+          // Profile status will be checked by the auth state change listener
+          set({ isLoading: false });
+          return { error: null };
+        } catch (error) {
+          console.error('Google sign-in error:', error);
+          set({ isLoading: false });
+          return { error: error as Error };
+        }
+      },
+
+      // Update user profile
+      updateProfile: async (updates: { displayName: string; avatar: string }) => {
+        set({ isLoading: true });
+
+        const { user } = get();
+        if (!user) {
+          set({ isLoading: false });
+          return { error: new Error('No user found') };
+        }
+
+        try {
+          // Update profile in database
+          const { error } = await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              display_name: updates.displayName,
+              avatar_data: updates.avatar,
+              has_completed_profile_setup: true,
+              updated_at: new Date().toISOString(),
+            });
+
+          if (error) {
+            set({ isLoading: false });
+            return { error };
+          }
+
+          // Update local profile state
+          set({
+            profile: {
+              id: user.id,
+              email: user.email || '',
+              displayName: updates.displayName,
+              avatar: updates.avatar,
+              hasCompletedProfileSetup: true,
+              usernameChangesRemaining: 1, // Default for new profiles
+              usernameChangeHistory: [],
+              lastUsernameChange: null,
+              displayNameLocked: false,
+            },
+            needsProfileSetup: false,
+            isLoading: false
+          });
+
+          return { error: null };
+        } catch (error) {
+          set({ isLoading: false });
+          return { error };
+        }
+      },
+
+      // Sign out
+      signOut: async (clearEmail = false) => {
+        set({ isLoading: true });
+
+        try {
+          // Only attempt Google sign out if GoogleSignin is properly configured and available
+          try {
+            if (GoogleSignin && typeof GoogleSignin.isSignedIn === 'function') {
+              const isSignedIn = await GoogleSignin.isSignedIn();
+              if (isSignedIn) {
+                await GoogleSignin.signOut();
+              }
+            }
+          } catch (googleError) {
+            // Ignore Google sign out errors - user might not have signed in with Google
+            console.log('Google sign out not needed or failed:', googleError);
+          }
+
+          // Sign out from Supabase
+          await supabase.auth.signOut();
+
+          set({
+            profile: null,
+            needsProfileSetup: false,
+            isLoading: false,
+            // Optionally clear remembered email
+            ...(clearEmail && { lastUsedEmail: null }),
+          });
+        } catch (error) {
+          console.error('Error signing out:', error);
+          set({ isLoading: false });
+        }
+      },
+
+      // Delete account permanently
+      deleteAccount: async () => {
+        set({ isLoading: true });
+
+        const { user } = get();
+        if (!user) {
+          set({ isLoading: false });
+          return { error: new Error('No user found') };
+        }
+
+        try {
+          // Validate account deletion
+          const validation = await AccountDeletionService.validateAccountDeletion(user.id);
+          if (!validation.success) {
+            set({ isLoading: false });
+            return { error: new Error(validation.error) };
+          }
+
+          // Perform account deletion
+          const result = await AccountDeletionService.deleteAccount(user.id);
+
+          if (!result.success) {
+            set({ isLoading: false });
+            return { error: new Error(result.error) };
+          }
+
+          // Clear all local state
+          set({
+            user: null,
+            session: null,
+            profile: null,
+            isLoading: false,
+            needsProfileSetup: false,
+            lastUsedEmail: null,
+          });
+
+          return { error: null };
+        } catch (error) {
+          console.error('Error deleting account:', error);
+          set({ isLoading: false });
+          return { error: error as Error };
+        }
+      },
+
+      // Reset user profile (existing function)
+      resetUserProfile: async () => {
+        const { user } = get();
+        if (!user) return;
+
+        try {
+          // Reset profile setup status
+          const { error } = await supabase
+            .from('users')
+            .update({
+              has_completed_profile_setup: false,
+              display_name: null,
+              avatar_data: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+
+          if (error) {
+            console.error('Error resetting profile:', error);
+            return;
+          }
+
+          // Update local state
+          set({
+            profile: {
+              id: user.id,
+              email: user.email || '',
+              displayName: null,
+              avatar: null,
+              hasCompletedProfileSetup: false,
+              usernameChangesRemaining: 1,
+              usernameChangeHistory: [],
+              lastUsernameChange: null,
+              displayNameLocked: false,
+            },
+            needsProfileSetup: true,
+          });
+        } catch (error) {
+          console.error('Error resetting profile:', error);
+        }
+      },
+
+    }),
     {
-      name: 'skrawl-user-data',
+      name: 'skrawl-auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      // Only persist these fields
       partialize: (state) => ({
+        session: state.session,
         user: state.user,
-        isSkipped: state.isSkipped,
-        preservedProfileData: state.preservedProfileData,
+        profile: state.profile,
+        lastUsedEmail: state.lastUsedEmail
       }),
     }
   )

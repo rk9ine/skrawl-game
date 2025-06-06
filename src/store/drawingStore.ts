@@ -1,7 +1,19 @@
 import { create } from 'zustand';
-import { drawingsApi } from '../services/mockApi';
-import { MockDrawing } from '../mock';
 import { DrawingPath } from '../types/drawing';
+
+// Drawing interface - will be updated when real drawing service is implemented
+interface Drawing {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  svgData: string;
+  createdAt: string;
+  updatedAt: string;
+  likes: number;
+  isPublic: boolean;
+  tags: string[];
+}
 
 // Simple helper function to ensure numbers are valid
 const ensureValidNumber = (num: number): number => {
@@ -84,7 +96,7 @@ interface DrawingState {
   tags: string[];
 
   // Saved drawings
-  savedDrawings: MockDrawing[];
+  savedDrawings: Drawing[];
   isLoading: boolean;
 
   // Actions
@@ -104,9 +116,9 @@ interface DrawingState {
   removeTag: (tag: string) => void;
 
   // Save/load actions
-  saveDrawing: (userId: string) => Promise<MockDrawing | null>;
+  saveDrawing: (userId: string) => Promise<Drawing | null>;
   loadDrawings: (userId: string) => Promise<void>;
-  loadDrawingById: (drawingId: string) => Promise<MockDrawing | null>;
+  loadDrawingById: (drawingId: string) => Promise<Drawing | null>;
 }
 
 export const useDrawingStore = create<DrawingState>((set, get) => ({
@@ -217,7 +229,6 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     set({
       paths: [],
       currentPath: '',
-      currentPoints: [],
     });
   },
 
@@ -267,16 +278,10 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
         `<path d="${p.path}" stroke="${p.color}" stroke-width="${p.strokeWidth}" fill="none" />`
       ).join('');
 
-      const drawing = await drawingsApi.saveDrawing({
-        userId,
-        title: title || 'Untitled Drawing',
-        description,
-        svgData,
-        isPublic,
-        tags,
-      });
+      // TODO: Implement real drawing service
+      console.log('Drawing service not implemented yet');
 
-      return drawing;
+      return null;
     } catch (error) {
       console.error('Error saving drawing:', error);
       return null;
@@ -287,10 +292,11 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      const drawings = await drawingsApi.getDrawingsByUser(userId);
+      // TODO: Implement real drawing service
+      console.log('Drawing service not implemented yet');
 
       set({
-        savedDrawings: drawings,
+        savedDrawings: [],
         isLoading: false,
       });
     } catch (error) {
@@ -303,11 +309,12 @@ export const useDrawingStore = create<DrawingState>((set, get) => ({
     try {
       set({ isLoading: true });
 
-      const drawing = await drawingsApi.getDrawingById(drawingId);
+      // TODO: Implement real drawing service
+      console.log('Drawing service not implemented yet');
 
       set({ isLoading: false });
 
-      return drawing;
+      return null;
     } catch (error) {
       console.error('Error loading drawing:', error);
       set({ isLoading: false });

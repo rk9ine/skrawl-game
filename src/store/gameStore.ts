@@ -1,11 +1,33 @@
 import { create } from 'zustand';
-import { gamesApi } from '../services/mockApi';
-import { MockGame } from '../mock';
+
+// Game interface - will be updated when real game service is implemented
+interface Game {
+  id: string;
+  name: string;
+  description: string;
+  creatorId: string;
+  players: Array<{
+    id: string;
+    displayName: string;
+    score: number;
+    isReady: boolean;
+  }>;
+  maxPlayers: number;
+  status: 'waiting' | 'playing' | 'finished';
+  currentRound: number;
+  totalRounds: number;
+  timePerRound: number;
+  createdAt: string;
+  isPublic: boolean;
+  theme: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gameCode?: string;
+}
 
 interface GameState {
   // Game listings
-  publicGames: MockGame[];
-  currentGame: MockGame | null;
+  publicGames: Game[];
+  currentGame: Game | null;
   isLoading: boolean;
   
   // Game creation
@@ -38,7 +60,7 @@ interface GameState {
   setIsPublic: (isPublic: boolean) => void;
   setTheme: (theme: string) => void;
   setDifficulty: (difficulty: 'easy' | 'medium' | 'hard') => void;
-  createGame: (userId: string) => Promise<MockGame | null>;
+  createGame: (userId: string) => Promise<Game | null>;
   
   // Actions - Game code
   setGameCode: (code: string) => void;
@@ -74,11 +96,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   loadPublicGames: async () => {
     try {
       set({ isLoading: true });
-      
-      const games = await gamesApi.getPublicGames();
-      
+
+      // TODO: Implement real game service
+      console.log('Game service not implemented yet');
+
       set({
-        publicGames: games,
+        publicGames: [],
         isLoading: false,
       });
     } catch (error) {
@@ -90,15 +113,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   joinGame: async (gameId) => {
     try {
       set({ isLoading: true });
-      
-      const response = await gamesApi.joinGame(gameId);
-      
+
+      // TODO: Implement real game service
+      console.log('Game service not implemented yet');
+
       set({
         isLoading: false,
-        currentGame: response.success ? response.game || null : null,
+        currentGame: null,
       });
-      
-      return response.success;
+
+      return false;
     } catch (error) {
       console.error('Error joining game:', error);
       set({ isLoading: false });
@@ -109,22 +133,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   joinPrivateGame: async (gameCode) => {
     try {
       set({ isLoading: true });
-      
-      const game = await gamesApi.getPrivateGameByCode(gameCode);
-      
-      if (!game) {
-        set({ isLoading: false });
-        return false;
-      }
-      
-      const response = await gamesApi.joinGame(game.id);
-      
+
+      // TODO: Implement real game service
+      console.log('Game service not implemented yet');
+
       set({
         isLoading: false,
-        currentGame: response.success ? response.game || null : null,
+        currentGame: null,
       });
-      
-      return response.success;
+
+      return false;
     } catch (error) {
       console.error('Error joining private game:', error);
       set({ isLoading: false });
@@ -160,28 +178,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       theme,
       difficulty,
     } = get();
-    
+
     try {
       set({ isLoading: true });
-      
-      const game = await gamesApi.createGame({
-        name: gameName,
-        description: gameDescription,
-        creatorId: userId,
-        maxPlayers,
-        totalRounds,
-        timePerRound,
-        isPublic,
-        theme,
-        difficulty,
-      });
-      
+
+      // TODO: Implement real game service
+      console.log('Game service not implemented yet');
+
       set({
         isLoading: false,
-        currentGame: game,
+        currentGame: null,
       });
-      
-      return game;
+
+      return null;
     } catch (error) {
       console.error('Error creating game:', error);
       set({ isLoading: false });
@@ -195,7 +204,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Actions - Game state
   getRandomPrompt: async () => {
     try {
-      const prompt = await gamesApi.getRandomPrompt();
+      // TODO: Implement real game service
+      console.log('Game service not implemented yet');
+      const prompt = '';
       set({ currentPrompt: prompt });
       return prompt;
     } catch (error) {

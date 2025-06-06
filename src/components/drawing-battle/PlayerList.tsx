@@ -68,7 +68,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   players,
 }) => {
   const { theme, typography, spacing, borderRadius } = useTheme();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
 
   // Get current user's profile data
   const currentUserName = user?.displayName || 'You';
@@ -220,7 +220,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
         {/* Player avatar - only show for current user with custom avatar */}
         {item.isCurrentUser ? (
           <UserAvatar
-            avatarData={user?.avatarData}
+            avatarData={profile?.avatar}
             size={28}
             backgroundColor={item.avatarColor || theme.primary}
           />

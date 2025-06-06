@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuthStore } from '../store';
+import { useAuthStore } from '../store/authStore';
 import { RootStackParamList, MainStackParamList } from '../types/navigation';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
-import AuthPromptScreen from '../screens/auth/AuthPromptScreen';
 import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 // Main Screens
@@ -17,46 +16,44 @@ import SettingsScreen from '../screens/main/SettingsScreen';
 import SkiaCanvasTestScreen from '../screens/main/SkiaCanvasTestScreen';
 import LeaderboardScreen from '../screens/main/LeaderboardScreen';
 import AvatarSelectionScreen from '../screens/main/AvatarSelectionScreen';
-
-
-// Loading Screen
-import LoadingScreen from '../screens/LoadingScreen';
+import ProfileEditScreen from '../screens/main/ProfileEditScreen';
+import GameModeSelectionScreen from '../screens/main/GameModeSelectionScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const MainStack = createNativeStackNavigator<MainStackParamList>();
 
 const AppNavigator = () => {
-  const { isLoading, checkSession, user, isSkipped, hasCompletedProfileSetup } = useAuthStore();
+  // Use more specific selectors to avoid unnecessary re-renders
+  const session = useAuthStore((state) => state.session);
+  const needsProfileSetup = useAuthStore((state) => state.needsProfileSetup);
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  // Debug logging to see what's happening (only log on state changes)
+  // Temporarily disabled to reduce noise
+  // React.useEffect(() => {
+  //   console.log('🧭 AppNavigator - Auth State:', {
+  //     hasSession: !!session,
+  //     userEmail: session?.user?.email,
+  //     needsProfileSetup,
+  //   });
+  // }, [session, needsProfileSetup]);
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {!user && !isSkipped ? (
+        {!session ? (
           // Not logged in - show auth flow
           <RootStack.Group>
             <RootStack.Screen name="Auth" component={LoginScreen} />
           </RootStack.Group>
-        ) : user && (hasCompletedProfileSetup() === false) ? (
+        ) : needsProfileSetup ? (
           // Logged in but profile not set up - show profile setup
-          // The explicit comparison to false is important to handle both:
-          // 1. New users where hasCompletedProfileSetup is explicitly false
-          // 2. First-time users where hasCompletedProfileSetup is undefined
           <RootStack.Group>
             <RootStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
           </RootStack.Group>
         ) : (
-          // Logged in with profile or skipped auth - show main app
+          // Logged in with profile - show main app
           <RootStack.Group>
             <RootStack.Screen name="Main" component={MainNavigator} />
-            <RootStack.Screen name="AuthPrompt" component={AuthPromptScreen} />
           </RootStack.Group>
         )}
       </RootStack.Navigator>
@@ -64,7 +61,7 @@ const AppNavigator = () => {
   );
 };
 
-// Main Navigator (after authentication or skipping)
+// Main Navigator (after authentication)
 const MainNavigator = () => {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
@@ -75,6 +72,8 @@ const MainNavigator = () => {
       <MainStack.Screen name="SkiaCanvasTest" component={SkiaCanvasTestScreen} />
       <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
       <MainStack.Screen name="AvatarSelection" component={AvatarSelectionScreen} />
+      <MainStack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+      <MainStack.Screen name="GameModeSelection" component={GameModeSelectionScreen} />
     </MainStack.Navigator>
   );
 };

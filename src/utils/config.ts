@@ -1,20 +1,18 @@
-// Environment configuration
-export const config = {
-  // Supabase configuration
-  supabase: {
-    url: process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL',
-    anonKey: process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY',
-  },
+// App configuration
+interface Config {
+  app: {
+    name: string;
+    version: string;
+    environment: 'development' | 'staging' | 'production';
+  };
+}
 
+export const config: Config = {
   // App configuration
   app: {
     name: 'Skrawl',
     version: '1.0.0',
-  },
-
-  // API configuration
-  api: {
-    baseUrl: process.env.API_BASE_URL || 'https://api.example.com',
+    environment: 'development',
   },
 };
 

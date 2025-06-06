@@ -10,7 +10,9 @@ export type MainStackParamList = {
   Settings: undefined;
   SkiaCanvasTest: undefined;
   Leaderboard: undefined;
-  AvatarSelection: undefined;
+  AvatarSelection: { fromProfileEdit?: boolean };
+  ProfileEdit: undefined;
+  GameModeSelection: undefined;
 };
 
 export type RootStackParamList = {

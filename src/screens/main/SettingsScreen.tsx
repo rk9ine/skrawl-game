@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
-import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
+import { Text, SafeAreaContainer, CustomIcon, DeleteAccountModal } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { MainStackParamList } from '../../types/navigation';
 
@@ -20,7 +20,8 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList
 const SettingsScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows, isDark, setThemeType, themeType } = useTheme();
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { user, isSkipped, signOut, resetUserProfile } = useAuthStore();
+  const { user, profile, signOut, resetUserProfile, deleteAccount, isLoading } = useAuthStore();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Create basic styles without theme values
   const styles = StyleSheet.create({
@@ -117,18 +118,48 @@ const SettingsScreen = () => {
         {
           text: 'Reset Profile',
           onPress: () => {
-            // First reset the profile
+            // Reset the profile - this will set hasCompletedProfileSetup to false
+            // which will automatically redirect to the ProfileSetup screen
             resetUserProfile();
-
-            // Then sign out and sign back in to trigger the profile setup flow
-            // This will automatically redirect to the ProfileSetup screen
-            // because hasCompletedProfileSetup will be false
-            signOut();
           },
           style: 'destructive'
         },
       ]
     );
+  };
+
+  const handleEditProfile = () => {
+    navigation.navigate('ProfileEdit');
+  };
+
+  const handleDeleteAccount = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    try {
+      const { error } = await deleteAccount();
+
+      if (error) {
+        Alert.alert(
+          'Deletion Failed',
+          error.message || 'Failed to delete account. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Success - user will be automatically redirected to auth screen
+      // due to auth state change
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert(
+        'Deletion Failed',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -208,7 +239,7 @@ const SettingsScreen = () => {
                     fontSize: typography.fontSizes.xxl
                   }
                 ]}>
-                  {isSkipped ? 'G' : user?.email?.charAt(0).toUpperCase() || 'U'}
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               </View>
 
@@ -222,7 +253,7 @@ const SettingsScreen = () => {
                     marginBottom: spacing.xxs
                   }
                 ]}>
-                  {isSkipped ? 'Guest User' : user?.email?.split('@')[0] || 'User'}
+                  {profile?.displayName || user?.email?.split('@')[0] || 'User'}
                 </Text>
 
                 <Text style={[
@@ -233,90 +264,153 @@ const SettingsScreen = () => {
                     fontSize: typography.fontSizes.sm
                   }
                 ]}>
-                  {isSkipped ? 'Not signed in' : user?.email || ''}
+                  {user?.email || 'No email'}
                 </Text>
               </View>
+
+              {/* Edit Profile Button */}
+              <TouchableOpacity
+                style={{
+                  padding: spacing.xs,
+                  borderRadius: borderRadius.md,
+                  backgroundColor: theme.backgroundAlt,
+                }}
+                onPress={handleEditProfile}
+              >
+                <CustomIcon name="create-outline" size={20} color={theme.textSecondary} />
+              </TouchableOpacity>
             </View>
 
-            {isSkipped ? (
-              <TouchableOpacity
-                style={[
-                  styles.signInButton,
-                  {
-                    backgroundColor: theme.primary,
-                    margin: spacing.md,
-                    borderRadius: borderRadius.lg,
-                    ...applyThemeShadow('md')
-                  }
-                ]}
-                onPress={() => signOut()} // This will sign out the guest user and show the Auth screen
-              >
+            {/* Edit Profile Row */}
+            <View style={[
+              styles.divider,
+              {
+                backgroundColor: theme.divider,
+                marginHorizontal: spacing.md
+              }
+            ]} />
+
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                {
+                  padding: spacing.md
+                }
+              ]}
+              onPress={handleEditProfile}
+            >
+              <View style={styles.settingInfo}>
                 <Text style={[
-                  styles.signInButtonText,
+                  styles.settingTitle,
                   {
-                    fontFamily: typography.fontFamily.primaryBold,
-                    color: '#FFFFFF',
+                    fontFamily: typography.fontFamily.primary,
+                    color: theme.text,
                     fontSize: typography.fontSizes.md
                   }
                 ]}>
-                  Sign In
+                  Edit Profile
+                </Text>
+                <Text style={[
+                  {
+                    fontFamily: typography.fontFamily.primary,
+                    color: theme.textSecondary,
+                    fontSize: typography.fontSizes.sm,
+                    marginTop: spacing.xxs
+                  }
+                ]}>
+                  {profile?.usernameChangesRemaining > 0 && !profile?.displayNameLocked
+                    ? `${profile.usernameChangesRemaining} username change remaining`
+                    : profile?.displayNameLocked
+                      ? 'Username permanently locked'
+                      : 'Change avatar anytime'
+                  }
+                </Text>
+              </View>
+
+              <CustomIcon name="chevron-forward" size={20} color={theme.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Reset Profile Button */}
+            {user?.hasCompletedProfileSetup && (
+              <TouchableOpacity
+                style={[
+                  styles.signOutButton,
+                  {
+                    borderColor: theme.border,
+                    marginHorizontal: spacing.md,
+                    marginTop: spacing.md,
+                    borderRadius: borderRadius.lg,
+                    backgroundColor: theme.backgroundAlt,
+                  }
+                ]}
+                onPress={handleResetProfile}
+              >
+                <Text style={[
+                  styles.signOutButtonText,
+                  {
+                    fontFamily: typography.fontFamily.primary,
+                    color: theme.textSecondary,
+                    fontSize: typography.fontSizes.md
+                  }
+                ]}>
+                  Reset Profile
                 </Text>
               </TouchableOpacity>
-            ) : (
-              <>
-                {/* Reset Profile Button */}
-                {user?.hasCompletedProfileSetup && (
-                  <TouchableOpacity
-                    style={[
-                      styles.signOutButton,
-                      {
-                        borderColor: theme.border,
-                        marginHorizontal: spacing.md,
-                        marginTop: spacing.md,
-                        borderRadius: borderRadius.lg,
-                        backgroundColor: theme.backgroundAlt,
-                      }
-                    ]}
-                    onPress={handleResetProfile}
-                  >
-                    <Text style={[
-                      styles.signOutButtonText,
-                      {
-                        fontFamily: typography.fontFamily.primary,
-                        color: theme.textSecondary,
-                        fontSize: typography.fontSizes.md
-                      }
-                    ]}>
-                      Reset Profile
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Sign Out Button */}
-                <TouchableOpacity
-                  style={[
-                    styles.signOutButton,
-                    {
-                      borderColor: theme.border,
-                      margin: spacing.md,
-                      borderRadius: borderRadius.lg
-                    }
-                  ]}
-                  onPress={handleSignOut}
-                >
-                  <Text style={[
-                    styles.signOutButtonText,
-                    {
-                      fontFamily: typography.fontFamily.primary,
-                      color: theme.error,
-                      fontSize: typography.fontSizes.md
-                    }
-                  ]}>
-                    Sign Out
-                  </Text>
-                </TouchableOpacity>
-              </>
             )}
+
+            {/* Sign Out Button */}
+            <TouchableOpacity
+              style={[
+                styles.signOutButton,
+                {
+                  borderColor: theme.border,
+                  margin: spacing.md,
+                  borderRadius: borderRadius.lg
+                }
+              ]}
+              onPress={handleSignOut}
+            >
+              <Text style={[
+                styles.signOutButtonText,
+                {
+                  fontFamily: typography.fontFamily.primary,
+                  color: theme.error,
+                  fontSize: typography.fontSizes.md
+                }
+              ]}>
+                Sign Out
+              </Text>
+            </TouchableOpacity>
+
+            {/* Delete Account Button */}
+            <TouchableOpacity
+              style={[
+                styles.signOutButton,
+                {
+                  borderColor: '#FF4444',
+                  backgroundColor: '#FF4444' + '10',
+                  marginHorizontal: spacing.md,
+                  marginBottom: spacing.md,
+                  borderRadius: borderRadius.lg,
+                  borderWidth: 1,
+                }
+              ]}
+              onPress={handleDeleteAccount}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <CustomIcon name="trash" size={20} color="#FF4444" style={{ marginRight: spacing.xs }} />
+                <Text style={[
+                  styles.signOutButtonText,
+                  {
+                    fontFamily: typography.fontFamily.primaryBold,
+                    color: '#FF4444',
+                    fontSize: typography.fontSizes.md
+                  }
+                ]}>
+                  Delete Account
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -458,6 +552,15 @@ const SettingsScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirmDelete={handleConfirmDeleteAccount}
+        displayName={profile?.displayName || 'Unknown'}
+        isDeleting={isLoading}
+      />
     </SafeAreaContainer>
   );
 };

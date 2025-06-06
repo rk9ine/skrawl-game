@@ -15,7 +15,10 @@
     "scheme": "skrawl",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.skrawl.app"
+      "bundleIdentifier": "com.skrawl.app",
+      "associatedDomains": [
+        "applinks:skrawl.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -23,18 +26,39 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.skrawl.app",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "skrawl.app"
+            },
+            {
+              "scheme": "skrawl"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-dev-client"
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "a0331c0e-157b-474b-815d-d1c12c14bac8"
       }
-    }
+    },
+    "owner": "mdrju"
   }
 }

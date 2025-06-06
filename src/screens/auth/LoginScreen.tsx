@@ -17,13 +17,14 @@ import { Text, SafeAreaContainer } from '../../components/ui';
 
 const LoginScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows } = useTheme();
-  const { signInWithEmail, signInWithGoogle, skipAuth } = useAuthStore();
+  const { sendEmailOtp, verifyEmailOtp, signInWithGoogle, lastUsedEmail } = useAuthStore();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(lastUsedEmail || '');
+  const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
 
-  const handleEmailLogin = async () => {
+  const handleSendCode = async () => {
     if (!email || !email.includes('@')) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
@@ -32,33 +33,76 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signInWithEmail(email);
+      const { error } = await useAuthStore.getState().sendEmailOtp(email);
 
       if (error) {
-        Alert.alert('Error', error.message);
-      } else {
-        setMagicLinkSent(true);
+        Alert.alert('Error', error.message || 'Failed to send verification code');
+        setIsLoading(false);
+        return;
       }
+
+      setIsLoading(false);
+      setCodeSent(true);
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Error', 'Failed to send magic link. Please try again.');
-    } finally {
+      console.error('Send code error:', error);
+      Alert.alert('Error', 'Failed to send verification code');
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await useAuthStore.getState().verifyEmailOtp(email, verificationCode);
+
+      if (error) {
+        Alert.alert('Error', error.message || 'Invalid verification code');
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - the auth state listener will handle navigation
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Verify code error:', error);
+      Alert.alert('Error', 'Failed to verify code');
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setIsLoading(true);
+
     try {
-      await signInWithGoogle();
+      const { error } = await signInWithGoogle();
+
+      if (error) {
+        if (error.message?.includes('not available')) {
+          Alert.alert(
+            'Google Sign-in Not Available',
+            'Google Sign-in requires a development build. Please use email authentication for now, or build the app with expo-dev-client for full Google Sign-in support.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Error', error.message || 'Google sign-in failed');
+        }
+      }
+
+      setIsLoading(false);
     } catch (error) {
       console.error('Google login error:', error);
-      Alert.alert('Error', 'Failed to sign in with Google. Please try again.');
+      Alert.alert('Error', 'Google sign-in failed');
+      setIsLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    skipAuth();
-  };
+
 
   return (
     <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
@@ -85,21 +129,50 @@ const LoginScreen = () => {
             </Text>
           </View>
 
-          {magicLinkSent ? (
-            <View style={styles.magicLinkSentContainer}>
+          {codeSent ? (
+            <View style={styles.verificationContainer}>
               <Ionicons name="mail" size={60} color={theme.primary} />
-              <Text style={[styles.magicLinkTitle, { fontFamily: typography.fontFamily.primaryBold, color: theme.text }]}>
-                Check your email
+              <Text style={[styles.verificationTitle, { fontFamily: typography.fontFamily.primaryBold, color: theme.text }]}>
+                Enter verification code
               </Text>
-              <Text style={[styles.magicLinkText, { fontFamily: typography.fontFamily.primary, color: theme.textSecondary }]}>
-                We've sent a magic link to {email}. Click the link in the email to sign in.
+              <Text style={[styles.verificationText, { fontFamily: typography.fontFamily.primary, color: theme.textSecondary }]}>
+                We've sent a 6-digit code to {email}. Enter the code below to sign in.
               </Text>
+
+              <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Ionicons name="key-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { fontFamily: typography.fontFamily.primary, color: theme.text }]}
+                  placeholder="000000"
+                  placeholderTextColor={theme.textDisabled}
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoCapitalize="none"
+                />
+              </View>
+
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: theme.primary }]}
-                onPress={() => setMagicLinkSent(false)}
+                onPress={handleVerifyCode}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.buttonText, { fontFamily: typography.fontFamily.primaryBold, color: '#FFFFFF' }]}>
+                    Verify Code
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: theme.secondary, opacity: 0.7 }]}
+                onPress={() => setCodeSent(false)}
               >
                 <Text style={[styles.buttonText, { fontFamily: typography.fontFamily.primaryBold, color: '#FFFFFF' }]}>
-                  Back to Login
+                  Back to Email
                 </Text>
               </TouchableOpacity>
             </View>
@@ -114,6 +187,16 @@ const LoginScreen = () => {
                   Sign in with email
                 </Text>
 
+                {lastUsedEmail && (
+                  <Text
+                    variant="body"
+                    color={theme.textSecondary}
+                    style={styles.hintText}
+                  >
+                    Using your previous email address
+                  </Text>
+                )}
+
                 <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
                   <TextInput
@@ -125,18 +208,26 @@ const LoginScreen = () => {
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
+                  {lastUsedEmail && email === lastUsedEmail && (
+                    <TouchableOpacity
+                      style={styles.clearEmailButton}
+                      onPress={() => setEmail('')}
+                    >
+                      <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <TouchableOpacity
                   style={[styles.button, { backgroundColor: theme.primary }]}
-                  onPress={handleEmailLogin}
+                  onPress={handleSendCode}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text style={[styles.buttonText, { fontFamily: typography.fontFamily.primaryBold, color: '#FFFFFF' }]}>
-                      Send Magic Link
+                      Send Verification Code
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -158,16 +249,7 @@ const LoginScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.skipContainer}>
-                <TouchableOpacity onPress={handleSkip}>
-                  <Text style={[styles.skipText, { fontFamily: typography.fontFamily.primary, color: theme.textSecondary }]}>
-                    Skip for now
-                  </Text>
-                </TouchableOpacity>
-                <Text style={[styles.skipNote, { fontFamily: typography.fontFamily.primary, color: theme.textDisabled }]}>
-                  You can access the whiteboard without an account
-                </Text>
-              </View>
+
             </>
           )}
         </ScrollView>
@@ -207,6 +289,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
+  hintText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,6 +311,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     height: '100%',
+  },
+  clearEmailButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   button: {
     height: 56,
@@ -260,28 +352,17 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 16,
   },
-  skipContainer: {
-    alignItems: 'center',
-  },
-  skipText: {
-    fontSize: 16,
-    marginBottom: 8,
-    textDecorationLine: 'underline',
-  },
-  skipNote: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  magicLinkSentContainer: {
+
+  verificationContainer: {
     alignItems: 'center',
     padding: 24,
   },
-  magicLinkTitle: {
+  verificationTitle: {
     fontSize: 24,
     marginTop: 24,
     marginBottom: 12,
   },
-  magicLinkText: {
+  verificationText: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 32,

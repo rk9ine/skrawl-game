@@ -4,21 +4,19 @@ A drawing mobile app game built with React Native and Expo.
 
 ## Features
 
-- Authentication with Google OAuth 2.0 and email magic links
-- Whiteboard drawing canvas
-- Multiplayer battle mode
-- Private match functionality
+- Drawing canvas with multiple tools
+- Whiteboard mode
 - Cross-platform consistency (iOS and Android)
 - Dark and light theme support
+- User interface for authentication flow (UI only)
 
 ## Tech Stack
 
 - **Frontend**: React Native for iOS and Android
 - **State Management**: Zustand
-- **Real-time Synchronization**: Yjs, WebSockets
-- **Backend**: Node.js
-- **Database & Auth**: Supabase
-- **Canvas**: Native Canvas Module for high performance Skia
+- **Canvas**: HTML5 Canvas with optimizations
+- **Navigation**: React Navigation
+- **UI Components**: Custom themed components
 
 ## Getting Started
 

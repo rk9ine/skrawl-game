@@ -5,8 +5,8 @@ import { Text } from '../ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { PlayerListPosition } from '../../store/layoutStore';
 
-// Mock chat messages for placeholder
-const mockMessages = [
+// Placeholder chat messages - will be replaced with real-time chat
+const placeholderMessages = [
   { id: '1', sender: 'System', text: 'Game started', isSystem: true, timestamp: new Date().toISOString() },
   { id: '2', sender: 'Player 1', text: 'Hello everyone!', isSystem: false, timestamp: new Date().toISOString() },
   { id: '3', sender: 'Player 2', text: 'Hi there!', isSystem: false, timestamp: new Date().toISOString() },
@@ -39,7 +39,7 @@ interface ChatSectionProps {
  */
 const ChatSection: React.FC<ChatSectionProps> = ({
   position,
-  messages = mockMessages,
+  messages = placeholderMessages,
 }) => {
   const { theme, typography, spacing, borderRadius } = useTheme();
 

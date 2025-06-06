@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 export type IconName =
   // Navigation & UI
-  | 'arrow-back' | 'chevron-back' | 'chevron-forward' | 'settings' | 'checkmark'
+  | 'arrow-back' | 'chevron-back' | 'chevron-forward' | 'settings' | 'checkmark' | 'close' | 'create-outline'
   // Dashboard Features
   | 'people' | 'brush' | 'trophy'
   // Reactions
-  | 'thumbs-up' | 'thumbs-down';
+  | 'thumbs-up' | 'thumbs-down'
+  // Alerts & Actions
+  | 'warning' | 'trash';
 
 interface CustomIconProps {
   name: IconName;
@@ -34,6 +36,8 @@ const CustomIcon: React.FC<CustomIconProps> = ({
     'chevron-forward': 'chevron-forward',
     'settings': 'settings',
     'checkmark': 'checkmark',
+    'close': 'close',
+    'create-outline': 'create-outline',
 
     // Dashboard Features
     'people': 'people',
@@ -43,6 +47,10 @@ const CustomIcon: React.FC<CustomIconProps> = ({
     // Reactions
     'thumbs-up': 'thumbs-up',
     'thumbs-down': 'thumbs-down',
+
+    // Alerts & Actions
+    'warning': 'warning',
+    'trash': 'trash',
   };
 
   // Check if this icon should use Ionicons

@@ -13,7 +13,7 @@ import { useAuthStore } from '../../store';
 import { Text, SafeAreaContainer, UserAvatar } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 
-// Mock leaderboard data - will be replaced with real API calls
+// Placeholder leaderboard data - will be replaced with real leaderboard service
 interface LeaderboardPlayer {
   id: string;
   name: string;
@@ -24,7 +24,7 @@ interface LeaderboardPlayer {
   winRate: number;
 }
 
-const mockLeaderboardData: LeaderboardPlayer[] = [
+const placeholderLeaderboardData: LeaderboardPlayer[] = [
   { id: '1', name: 'ArtMaster', avatar: 'brush', score: 2450, rank: 1, gamesPlayed: 45, winRate: 78 },
   { id: '2', name: 'SketchKing', avatar: 'trophy', score: 2380, rank: 2, gamesPlayed: 52, winRate: 73 },
   { id: '3', name: 'DrawingQueen', avatar: 'star', score: 2290, rank: 3, gamesPlayed: 38, winRate: 81 },
@@ -41,7 +41,7 @@ const mockLeaderboardData: LeaderboardPlayer[] = [
 const LeaderboardScreen: React.FC = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardPlayer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,8 +53,8 @@ const LeaderboardScreen: React.FC = () => {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // In real implementation, this would be an API call
-      setLeaderboardData(mockLeaderboardData);
+      // TODO: Implement real leaderboard service
+      setLeaderboardData(placeholderLeaderboardData);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
     } finally {
@@ -135,7 +135,7 @@ const LeaderboardScreen: React.FC = () => {
         {/* Player Avatar - only show for current user with custom avatar */}
         {isUser ? (
           <UserAvatar
-            avatarData={user?.avatarData}
+            avatarData={profile?.avatar}
             size={40}
             style={{ marginRight: spacing.md }}
           />

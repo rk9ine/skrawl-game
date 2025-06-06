@@ -1,11 +1,16 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { useAuthStore } from '../store/authStore';
 
-const LoadingScreen = () => {
+interface LoadingScreenProps {
+  message?: string;
+}
+
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ message }) => {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#6A8D73" />
-      <Text style={styles.text}>Loading Skrawl...</Text>
+      <Text style={styles.text}>{message || 'Loading Skrawl...'}</Text>
     </View>
   );
 };

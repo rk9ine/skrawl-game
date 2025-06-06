@@ -27,7 +27,7 @@ const DrawingBattleScreen = () => {
   const { theme, spacing } = useTheme();
   const navigation = useNavigation();
   const { chatInputPosition, useSystemKeyboard } = useLayoutStore();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -192,7 +192,7 @@ const DrawingBattleScreen = () => {
         avatarIcon: user.avatar || 'person',
         avatarColor: '#4361EE',
         isCurrentUser: true,
-        avatarData: user.avatarData
+        avatarData: profile?.avatar
       },
     ];
   }, [user]);

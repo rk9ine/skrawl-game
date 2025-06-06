@@ -14,6 +14,7 @@ import {
   ScrollView,
   PanResponder,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -65,7 +66,7 @@ const avatarOptions = [
 const ProfileSetupScreen = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation<ProfileSetupScreenNavigationProp>();
-  const { user, updateUserProfile, signOut } = useAuthStore();
+  const { user, updateProfile, signOut, isLoading } = useAuthStore();
   const { width, height } = useWindowDimensions();
 
   // Animation values
@@ -223,45 +224,32 @@ const ProfileSetupScreen = () => {
   };
 
   // Handle complete profile setup
-  const handleCompleteSetup = () => {
+  const handleCompleteSetup = async () => {
     if (validateUsername(username)) {
-      // Create comprehensive avatar data
-      const avatarData = {
-        type: selectedAvatar.image ? 'custom' : 'icon',
-        value: selectedAvatar.icon || selectedAvatar.name,
-        color: selectedAvatar.color,
-        ...(selectedAvatar.image && { imagePath: selectedAvatar.name })
-      };
+      try {
+        // Update user profile with selected username and avatar
+        const { error } = await updateProfile({
+          displayName: username,
+          avatar: selectedAvatar.icon || selectedAvatar.name,
+        });
 
-      // Update user profile with selected username and avatar
-      updateUserProfile({
-        displayName: username,
-        avatar: selectedAvatar.icon || selectedAvatar.name, // Keep simple for backward compatibility
-        avatarData: JSON.stringify(avatarData), // Store detailed avatar info
-        hasCompletedProfileSetup: true,
-      });
-
-      // Log to confirm profile setup is complete
-      console.log('Profile setup complete:', {
-        username,
-        avatar: selectedAvatar.icon || selectedAvatar.name,
-        avatarData,
-        hasCompletedProfileSetup: true
-      });
+        if (error) {
+          console.error('Error completing profile setup:', error);
+          Alert.alert('Error', error.message || 'Failed to save profile. Please try again.');
+        }
+        // Success is handled automatically by auth state change
+      } catch (error) {
+        console.error('Error completing profile setup:', error);
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+      }
     }
   };
 
   // Handle back button press (sign out)
   const handleBack = () => {
-    // Show sign out confirmation
-    handleSignOut();
-  };
-
-  // Handle sign out
-  const handleSignOut = () => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out?',
+      'Are you sure you want to sign out? Your changes will be lost.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -326,7 +314,7 @@ const ProfileSetupScreen = () => {
                 size={typography.fontSizes.lg}
                 style={{ marginBottom: spacing.xxs, textAlign: 'center' }}
               >
-                Welcome to Amazonian!
+                Welcome to Skrawl!
               </Text>
 
               <Text
@@ -509,19 +497,25 @@ const ProfileSetupScreen = () => {
                   backgroundColor: theme.primary,
                   borderRadius: borderRadius.md,
                   ...applyThemeShadow('md'),
-                  marginTop: spacing.md
+                  marginTop: spacing.md,
+                  opacity: isLoading ? 0.7 : 1
                 }
               ]}
               onPress={handleCompleteSetup}
+              disabled={isLoading}
             >
-              <Text
-                variant="body"
-                bold
-                color="#FFFFFF"
-                size={typography.fontSizes.md}
-              >
-                Complete Setup
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text
+                  variant="body"
+                  bold
+                  color="#FFFFFF"
+                  size={typography.fontSizes.md}
+                >
+                  Complete Setup
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </Animated.View>
