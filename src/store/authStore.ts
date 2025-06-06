@@ -3,8 +3,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, authConfig } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
+
+// Conditionally import Google Sign-In only when available
+let GoogleSignin: any = null;
+try {
+  if (Platform.OS === 'android') {
+    GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+  }
+} catch (error) {
+  console.log('Google Sign-In not available on this platform');
+}
 import { AccountDeletionService } from '../services/accountDeletionService';
 
 // User profile interface
@@ -49,11 +58,13 @@ interface AuthState {
   _authListener?: () => void;
 }
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  iosClientId: authConfig.googleOAuth.iosClientId,
-  webClientId: Platform.OS === 'android' ? authConfig.googleOAuth.androidClientId : undefined,
-});
+// Configure Google Sign-In only if available
+if (GoogleSignin && Platform.OS === 'android') {
+  GoogleSignin.configure({
+    iosClientId: authConfig.googleOAuth.iosClientId,
+    webClientId: authConfig.googleOAuth.webClientId, // Use web client ID for both platforms
+  });
+}
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -276,6 +287,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Google Sign-in
       signInWithGoogle: async () => {
+        // Check if Google Sign-In is available
+        if (!GoogleSignin || Platform.OS !== 'android') {
+          return {
+            error: new Error('Google Sign-In is not available on this platform. Please use email authentication.')
+          };
+        }
+
         set({ isLoading: true });
 
         try {

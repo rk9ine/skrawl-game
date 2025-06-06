@@ -83,10 +83,13 @@ const LoginScreen = () => {
       const { error } = await signInWithGoogle();
 
       if (error) {
-        if (error.message?.includes('not available')) {
+        if (error.message?.includes('not available') ||
+            error.message?.includes('platform')) {
           Alert.alert(
             'Google Sign-in Not Available',
-            'Google Sign-in requires a development build. Please use email authentication for now, or build the app with expo-dev-client for full Google Sign-in support.',
+            Platform.OS === 'ios'
+              ? 'Google Sign-in on iOS requires a development build. Please use email authentication for now.'
+              : 'Google Sign-in requires a development build. Please use email authentication for now, or build the app with expo-dev-client for full Google Sign-in support.',
             [{ text: 'OK' }]
           );
         } else {

@@ -1,13 +1,24 @@
 import { supabase, authConfig } from './supabase';
 import { User, AuthError, Session } from '@supabase/supabase-js';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  iosClientId: authConfig.googleOAuth.iosClientId,
-  webClientId: Platform.OS === 'android' ? authConfig.googleOAuth.androidClientId : undefined,
-});
+// Conditionally import Google Sign-In only when available
+let GoogleSignin: any = null;
+try {
+  if (Platform.OS === 'android') {
+    GoogleSignin = require('@react-native-google-signin/google-signin').GoogleSignin;
+  }
+} catch (error) {
+  console.log('Google Sign-In not available on this platform');
+}
+
+// Configure Google Sign-In only if available
+if (GoogleSignin && Platform.OS === 'android') {
+  GoogleSignin.configure({
+    iosClientId: authConfig.googleOAuth.iosClientId,
+    webClientId: authConfig.googleOAuth.webClientId, // Use web client ID for both platforms
+  });
+}
 
 export interface AuthResult {
   user: User | null;
@@ -118,13 +129,22 @@ class SupabaseAuthService implements AuthService {
   }
 
   async signInWithGoogle(): Promise<AuthResult> {
+    // Check if Google Sign-In is available
+    if (!GoogleSignin || Platform.OS !== 'android') {
+      return {
+        user: null,
+        session: null,
+        error: new Error('Google Sign-In is not available on this platform. Please use email authentication.')
+      };
+    }
+
     try {
       // Check if Google Play Services are available
       await GoogleSignin.hasPlayServices();
-      
+
       // Get Google user info
       const userInfo = await GoogleSignin.signIn();
-      
+
       if (!userInfo.data?.idToken) {
         return {
           user: null,

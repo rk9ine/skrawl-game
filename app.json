@@ -17,8 +17,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.skrawl.app",
       "associatedDomains": [
+        "applinks:skrawl.app",
         "applinks:skrawl.app"
-      ]
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

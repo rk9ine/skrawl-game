@@ -38,6 +38,8 @@ export const authConfig = {
     iosClientId: ENV.GOOGLE_OAUTH.IOS_CLIENT_ID,
     // Android client ID
     androidClientId: ENV.GOOGLE_OAUTH.ANDROID_CLIENT_ID,
+    // Web client ID (for React Native with Supabase)
+    webClientId: ENV.GOOGLE_OAUTH.WEB_CLIENT_ID,
     // Redirect URL
     redirectUrl: ENV.GOOGLE_OAUTH.REDIRECT_URL,
   },

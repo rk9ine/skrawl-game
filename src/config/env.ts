@@ -14,6 +14,7 @@ export const ENV = {
   GOOGLE_OAUTH: {
     IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '521406618633-qnlvheehuo39v8kojplskov57n52a3sh.apps.googleusercontent.com',
     ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '521406618633-3k31rl0mpfamqmacr9tgslb57nf9ucgg.apps.googleusercontent.com',
+    WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '521406618633-mief1kv08aur34v74dsi2fricdjsfas3.apps.googleusercontent.com',
     REDIRECT_URL: process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URL || 'skrawl://auth/callback',
   },
 
