@@ -8,7 +8,8 @@ export type MainStackParamList = {
   DrawingBattle: { privateMode?: boolean };
   PrivateMatch: { matchId?: string };
   Settings: undefined;
-  SkiaCanvasTest: undefined;
+  Whiteboard: undefined;
+
   Leaderboard: undefined;
   AvatarSelection: { fromProfileEdit?: boolean };
   ProfileEdit: undefined;

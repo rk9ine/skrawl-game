@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Image, View, Platform, StyleSheet } from 'react-native';
 
 interface GifAvatarProps {
@@ -10,8 +10,8 @@ interface GifAvatarProps {
 }
 
 /**
- * Enhanced Avatar component specifically for GIF animation support
- * Handles platform-specific GIF rendering issues
+ * Simple GIF Avatar component that lets React Native handle GIF animations naturally
+ * Removed aggressive refresh strategies that were interrupting animations
  */
 const GifAvatar: React.FC<GifAvatarProps> = ({
   source,
@@ -22,16 +22,6 @@ const GifAvatar: React.FC<GifAvatarProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Force refresh every few seconds to restart GIF animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey(prev => prev + 1);
-    }, 5000); // Refresh every 5 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleLoad = () => {
     setImageLoaded(true);
@@ -67,7 +57,6 @@ const GifAvatar: React.FC<GifAvatarProps> = ({
       fadeDuration: 0,
       // Additional Android GIF fixes
       progressiveRenderingEnabled: true,
-      shouldRasterizeIOS: false,
     },
     default: {
       resizeMode: 'cover' as const,
@@ -81,14 +70,8 @@ const GifAvatar: React.FC<GifAvatarProps> = ({
         style={[imageStyle, { backgroundColor: 'transparent' }]}
         onLoad={handleLoad}
         onError={handleError}
-        // Simplified props for better GIF compatibility
-        resizeMode="cover"
-        fadeDuration={0}
-        // Force re-render to help with animation
-        key={`gif-${refreshKey}-${source}`}
+        {...imageProps}
       />
-
-
     </View>
   );
 };

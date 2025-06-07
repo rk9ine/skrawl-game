@@ -11,9 +11,10 @@ import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 // Main Screens
 import DashboardScreen from '../screens/main/DashboardScreen';
 import DrawingBattleScreen from '../screens/main/DrawingBattleScreen';
+import WhiteboardScreen from '../screens/main/WhiteboardScreen';
 import PrivateMatchScreen from '../screens/main/PrivateMatchScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
-import SkiaCanvasTestScreen from '../screens/main/SkiaCanvasTestScreen';
+
 import LeaderboardScreen from '../screens/main/LeaderboardScreen';
 import AvatarSelectionScreen from '../screens/main/AvatarSelectionScreen';
 import ProfileEditScreen from '../screens/main/ProfileEditScreen';
@@ -70,9 +71,10 @@ const MainNavigator = () => {
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="Dashboard" component={DashboardScreen} />
       <MainStack.Screen name="DrawingBattle" component={DrawingBattleScreen} />
+      <MainStack.Screen name="Whiteboard" component={WhiteboardScreen} />
       <MainStack.Screen name="PrivateMatch" component={PrivateMatchScreen} />
       <MainStack.Screen name="Settings" component={SettingsScreen} />
-      <MainStack.Screen name="SkiaCanvasTest" component={SkiaCanvasTestScreen} />
+
       <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
       <MainStack.Screen name="AvatarSelection" component={AvatarSelectionScreen} />
       <MainStack.Screen name="ProfileEdit" component={ProfileEditScreen} />

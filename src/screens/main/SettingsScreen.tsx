@@ -15,7 +15,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { Text, SafeAreaContainer, CustomIcon, DeleteAccountModal } from '../../components/ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { MainStackParamList } from '../../types/navigation';
-import ProfileDebugPanel from '../../components/debug/ProfileDebugPanel';
+
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -652,7 +652,9 @@ const SettingsScreen = () => {
               <CustomIcon name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
-          <ProfileDebugPanel />
+          <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: 20 }]}>
+            Debug panel removed for production
+          </Text>
         </View>
       )}
     </SafeAreaContainer>

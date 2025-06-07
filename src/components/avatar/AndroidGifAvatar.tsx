@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Image, View, Platform, StyleSheet } from 'react-native';
 
 interface AndroidGifAvatarProps {
@@ -11,7 +11,7 @@ interface AndroidGifAvatarProps {
 
 /**
  * Android-optimized GIF Avatar component
- * Uses aggressive refresh strategy to force animation on Android
+ * Simplified to let React Native handle GIF animations naturally
  */
 const AndroidGifAvatar: React.FC<AndroidGifAvatarProps> = ({
   source,
@@ -20,24 +20,20 @@ const AndroidGifAvatar: React.FC<AndroidGifAvatarProps> = ({
   onLoad,
   onError,
 }) => {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  // Aggressive refresh strategy for Android
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const interval = setInterval(() => {
-        // Force re-render by toggling visibility and changing key
-        setIsVisible(false);
-        setTimeout(() => {
-          setRefreshKey(prev => prev + 1);
-          setIsVisible(true);
-        }, 50);
-      }, 3000); // Refresh every 3 seconds
+  const handleLoad = () => {
+    setImageLoaded(true);
+    setHasError(false);
+    onLoad?.();
+  };
 
-      return () => clearInterval(interval);
-    }
-  }, []);
+  const handleError = (error: any) => {
+    setHasError(true);
+    setImageLoaded(false);
+    onError?.(error);
+  };
 
   const imageStyle = {
     width: size,
@@ -46,27 +42,19 @@ const AndroidGifAvatar: React.FC<AndroidGifAvatarProps> = ({
     ...style,
   };
 
-  if (!isVisible) {
-    return <View style={[imageStyle, { backgroundColor: 'transparent' }]} />;
-  }
-
   return (
     <View style={[imageStyle, { overflow: 'hidden', backgroundColor: 'transparent' }]}>
       <Image
         source={source}
         style={[imageStyle, { backgroundColor: 'transparent' }]}
-        onLoad={onLoad}
-        onError={onError}
+        onLoad={handleLoad}
+        onError={handleError}
         resizeMode="cover"
         fadeDuration={0}
-        // Android-specific optimizations
+        // Android-specific optimizations for GIF performance
         renderToHardwareTextureAndroid={true}
         progressiveRenderingEnabled={true}
-        // Force re-render with unique key
-        key={`android-gif-${refreshKey}`}
       />
-
-
     </View>
   );
 };

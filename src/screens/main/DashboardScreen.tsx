@@ -100,11 +100,11 @@ const DashboardScreen = () => {
     {
       id: 'whiteboard',
       title: 'Whiteboard',
-      description: 'Advanced drawing canvas with Skia rendering',
+      description: 'Free drawing canvas for creative expression',
       icon: 'brush',
       iconColor: '#FFFFFF',
       iconBgColor: theme.secondary,
-      navigateTo: 'SkiaCanvasTest',
+      navigateTo: 'Whiteboard',
     },
   ];
 
