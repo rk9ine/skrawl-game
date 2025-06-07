@@ -17,6 +17,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { Text, SafeAreaContainer, CustomIcon, UserAvatar } from '../../components/ui';
+import { WebSocketTest } from '../../components/WebSocketTest';
+import { ENV } from '../../config/env';
 
 type DashboardScreenNavigationProp = NativeStackNavigationProp<
   MainStackParamList & RootStackParamList
@@ -56,6 +58,9 @@ const DashboardScreen = () => {
   // State for layout
   const [contentHeight, setContentHeight] = useState(0);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
+
+  // Development mode WebSocket test
+  const [showWebSocketTest, setShowWebSocketTest] = useState(false);
 
   // Use single column layout for consistency with GameModeSelectionScreen
   const getNumColumns = () => {
@@ -215,25 +220,51 @@ const DashboardScreen = () => {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.settingsButton,
-            {
-              backgroundColor: 'transparent',
-              borderRadius: borderRadius.round / 2,
-            }
-          ]}
-          onPress={handleNavigateToSettings}
-        >
-          <UserAvatar
-            avatarData={profile?.avatar}
-            size={48}
-            style={{
-              borderRadius: 24,
-              ...applyThemeShadow('md')
-            }}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {/* Development mode WebSocket test button */}
+          {ENV.APP_ENV === 'development' && (
+            <TouchableOpacity
+              style={[
+                styles.devButton,
+                {
+                  backgroundColor: theme.secondary,
+                  borderRadius: borderRadius.md,
+                  marginRight: spacing.md,
+                }
+              ]}
+              onPress={() => setShowWebSocketTest(true)}
+            >
+              <Text
+                variant="body"
+                size={typography.fontSizes.xs}
+                color="#FFFFFF"
+                style={{ fontWeight: '600' }}
+              >
+                WS
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.settingsButton,
+              {
+                backgroundColor: 'transparent',
+                borderRadius: borderRadius.round / 2,
+              }
+            ]}
+            onPress={handleNavigateToSettings}
+          >
+            <UserAvatar
+              avatarData={profile?.avatar}
+              size={48}
+              style={{
+                borderRadius: 24,
+                ...applyThemeShadow('md')
+              }}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Animated.View
@@ -271,6 +302,11 @@ const DashboardScreen = () => {
           columnWrapperStyle={getNumColumns() > 1 ? styles.row : undefined}
         />
       </Animated.View>
+
+      {/* WebSocket Test Overlay (Development Only) */}
+      {showWebSocketTest && (
+        <WebSocketTest onClose={() => setShowWebSocketTest(false)} />
+      )}
     </SafeAreaContainer>
   );
 };
@@ -288,12 +324,21 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  devButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   settingsButton: {
     width: 48,
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 16,
   },
   content: {
     flex: 1,

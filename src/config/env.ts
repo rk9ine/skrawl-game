@@ -10,6 +10,11 @@ export const ENV = {
   NODE_ENV: __DEV__ ? 'development' : 'production',
   APP_ENV: process.env.EXPO_PUBLIC_APP_ENV || 'development',
 
+  // WebSocket Server Configuration
+  WEBSOCKET_URL: __DEV__
+    ? (process.env.EXPO_PUBLIC_WEBSOCKET_URL || 'ws://192.168.0.15:3001')
+    : (process.env.EXPO_PUBLIC_WEBSOCKET_URL_PROD || 'wss://your-production-server.com'),
+
   // Google OAuth Configuration
   GOOGLE_OAUTH: {
     IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '521406618633-qnlvheehuo39v8kojplskov57n52a3sh.apps.googleusercontent.com',
