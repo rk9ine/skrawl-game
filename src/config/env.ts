@@ -24,11 +24,7 @@ export const ENV = {
     RETRY_ATTEMPTS: 3,
   },
 
-  // Real-time Configuration
-  REALTIME: {
-    EVENTS_PER_SECOND: parseInt(process.env.EXPO_PUBLIC_REALTIME_EVENTS_PER_SECOND || '10', 10),
-    RECONNECT_ATTEMPTS: 5,
-  },
+  // Real-time and WebSocket configurations removed - will be reimplemented with new backend
 };
 
 // Validation function to ensure required environment variables are set

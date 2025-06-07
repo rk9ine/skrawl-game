@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
     height: 56,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   socialButton: {
     flexDirection: 'row',
     height: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',

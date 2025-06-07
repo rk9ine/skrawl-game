@@ -6,12 +6,14 @@ import {
   Platform,
   Animated,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList, RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
+// Game store removed - will be reimplemented with new backend
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
@@ -56,7 +58,9 @@ const avatarOptions = [
 const GameModeSelectionScreen = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation<GameModeSelectionScreenNavigationProp>();
-  const { profile } = useAuthStore();
+  const { profile, user } = useAuthStore();
+  // Game functionality removed - will be reimplemented with new backend
+  const isLoading = false;
 
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -96,19 +100,25 @@ const GameModeSelectionScreen = () => {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
+  // Game loading removed - will be reimplemented with new backend
+
   // Navigation handlers
   const handleGoBack = () => {
     navigation.goBack();
   };
 
-  const handleQuickPlay = () => {
-    // Navigate directly to Drawing Battle with current avatar
+  const handleQuickPlay = async () => {
+    // Navigate to Drawing Battle screen for UI testing (backend will be implemented later)
     navigation.navigate('DrawingBattle');
   };
 
   const handleCustomGame = () => {
-    // Navigate to Drawing Battle with Private Mode overlay
+    // Navigate to Drawing Battle with Private Mode for UI testing (backend will be implemented later)
     navigation.navigate('DrawingBattle', { privateMode: true });
+  };
+
+  const handleLeaderboard = () => {
+    navigation.navigate('Leaderboard');
   };
 
   return (
@@ -235,16 +245,17 @@ const GameModeSelectionScreen = () => {
             style={[
               styles.gameModeCard,
               {
-                backgroundColor: theme.primary,
+                backgroundColor: isLoading ? theme.textDisabled : theme.primary,
                 borderRadius: borderRadius.lg,
                 ...applyThemeShadow('md'),
                 marginBottom: spacing.md
               }
             ]}
             onPress={handleQuickPlay}
+            disabled={isLoading}
           >
             <Ionicons
-              name="flash"
+              name={isLoading ? "hourglass" : "flash"}
               size={32}
               color="#FFFFFF"
               style={styles.cardIcon}
@@ -256,7 +267,7 @@ const GameModeSelectionScreen = () => {
                 color="#FFFFFF"
                 style={styles.cardTitle}
               >
-                Quick Play
+                {isLoading ? 'Finding Game...' : 'Quick Play'}
               </Text>
               <Text
                 variant="body"
@@ -264,7 +275,10 @@ const GameModeSelectionScreen = () => {
                 color="#FFFFFF"
                 style={styles.cardDescription}
               >
-                Jump straight into a game with your current avatar
+                {isLoading
+                  ? 'Looking for available games or creating new one...'
+                  : 'Jump straight into a game with your current avatar'
+                }
               </Text>
             </View>
             <CustomIcon name="chevron-forward" size={24} color="#FFFFFF" />
@@ -277,7 +291,8 @@ const GameModeSelectionScreen = () => {
               {
                 backgroundColor: theme.secondary,
                 borderRadius: borderRadius.lg,
-                ...applyThemeShadow('md')
+                ...applyThemeShadow('md'),
+                marginBottom: spacing.md
               }
             ]}
             onPress={handleCustomGame}
@@ -304,6 +319,45 @@ const GameModeSelectionScreen = () => {
                 style={styles.cardDescription}
               >
                 Set up a private match with custom settings
+              </Text>
+            </View>
+            <CustomIcon name="chevron-forward" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          {/* Leaderboard Card */}
+          <TouchableOpacity
+            style={[
+              styles.gameModeCard,
+              {
+                backgroundColor: theme.warning,
+                borderRadius: borderRadius.lg,
+                ...applyThemeShadow('md')
+              }
+            ]}
+            onPress={handleLeaderboard}
+          >
+            <Ionicons
+              name="trophy"
+              size={32}
+              color="#FFFFFF"
+              style={styles.cardIcon}
+            />
+            <View style={styles.cardContent}>
+              <Text
+                variant="heading"
+                size={typography.fontSizes.lg}
+                color="#FFFFFF"
+                style={styles.cardTitle}
+              >
+                Leaderboard
+              </Text>
+              <Text
+                variant="body"
+                size={typography.fontSizes.sm}
+                color="#FFFFFF"
+                style={styles.cardDescription}
+              >
+                View top players and your ranking
               </Text>
             </View>
             <CustomIcon name="chevron-forward" size={24} color="#FFFFFF" />

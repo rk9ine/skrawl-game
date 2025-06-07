@@ -314,7 +314,7 @@ const ProfileEditScreen = () => {
             <CustomIcon name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
 
-          <Text variant="heading" size={typography.fontSizes.xxl}>
+          <Text variant="heading" size={typography.fontSizes.xl}>
             Edit Profile
           </Text>
 
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 16,
@@ -374,14 +374,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
   },
   avatarButton: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
   },
 });

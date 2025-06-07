@@ -24,6 +24,7 @@ interface LeaderboardPlayer {
   winRate: number;
 }
 
+// Placeholder data for UI testing (will be replaced with real leaderboard service)
 const placeholderLeaderboardData: LeaderboardPlayer[] = [
   { id: '1', name: 'ArtMaster', avatar: 'brush', score: 2450, rank: 1, gamesPlayed: 45, winRate: 78 },
   { id: '2', name: 'SketchKing', avatar: 'trophy', score: 2380, rank: 2, gamesPlayed: 52, winRate: 73 },
@@ -53,7 +54,7 @@ const LeaderboardScreen: React.FC = () => {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // TODO: Implement real leaderboard service
+      // Using placeholder data for UI testing (real leaderboard service will be implemented later)
       setLeaderboardData(placeholderLeaderboardData);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
@@ -109,9 +110,11 @@ const LeaderboardScreen: React.FC = () => {
             backgroundColor: isUser ? theme.primary + '15' : theme.surface,
             borderColor: isUser ? theme.primary : theme.border,
             borderWidth: isUser ? 2 : 1,
-            borderRadius: borderRadius.md,
+            borderRadius: borderRadius.lg,
             marginBottom: spacing.xs,
-            ...applyThemeShadow('sm')
+            // Adjust padding to compensate for thicker border
+            padding: isUser ? spacing.md - 1 : spacing.md,
+            ...applyThemeShadow('md')
           }
         ]}
       >
@@ -160,7 +163,7 @@ const LeaderboardScreen: React.FC = () => {
               variant="heading"
               size={typography.fontSizes.md}
               color={isUser ? theme.primary : theme.text}
-              style={{ fontWeight: isUser ? 'bold' : 'normal' }}
+              bold={isUser}
             >
               {item.name}
               {isUser && (
@@ -168,7 +171,7 @@ const LeaderboardScreen: React.FC = () => {
                   variant="body"
                   size={typography.fontSizes.sm}
                   color={theme.primary}
-                  style={{ fontWeight: 'normal' }}
+                  bold={false}
                 >
                   {' '}(You)
                 </Text>
@@ -220,10 +223,11 @@ const LeaderboardScreen: React.FC = () => {
     backButton: {
       width: 40,
       height: 40,
-      borderRadius: borderRadius.round,
+      borderRadius: borderRadius.round / 2,
       backgroundColor: theme.backgroundAlt,
       justifyContent: 'center',
       alignItems: 'center',
+      ...applyThemeShadow('sm'),
     },
     content: {
       flex: 1,
@@ -232,7 +236,7 @@ const LeaderboardScreen: React.FC = () => {
     playerItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: spacing.md,
+      // Padding is set dynamically based on border width
     },
     rankContainer: {
       width: 60,

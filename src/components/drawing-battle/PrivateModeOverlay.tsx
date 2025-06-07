@@ -236,7 +236,7 @@ const PrivateModeOverlay: React.FC<PrivateModeOverlayProps> = ({
                     variant="body"
                     size={typography.fontSizes.sm}
                     color="#FFFFFF"
-                    style={styles.actionButtonText}
+                    bold={true}
                   >
                     Copy
                   </Text>
@@ -257,7 +257,7 @@ const PrivateModeOverlay: React.FC<PrivateModeOverlayProps> = ({
                     variant="body"
                     size={typography.fontSizes.sm}
                     color="#FFFFFF"
-                    style={styles.actionButtonText}
+                    bold={true}
                   >
                     New
                   </Text>
@@ -435,7 +435,7 @@ const PrivateModeOverlay: React.FC<PrivateModeOverlayProps> = ({
               variant="heading"
               size={typography.fontSizes.lg}
               color="#FFFFFF"
-              style={styles.startButtonText}
+              bold={true}
             >
               Start Private Game
             </Text>
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   actionButtonText: {
-    fontWeight: '600',
+    // Use bold prop instead of fontWeight for consistent typography
   },
   optionRow: {
     flexDirection: 'row',
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   startButtonText: {
-    fontWeight: '600',
+    // Use bold prop instead of fontWeight for consistent typography
   },
   customWordsContainer: {
     gap: 12,

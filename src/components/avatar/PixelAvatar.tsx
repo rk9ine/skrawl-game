@@ -191,10 +191,7 @@ const PixelAvatar: React.FC<PixelAvatarProps> = ({
   // Create animated props for the container
   const animatedProps = useAnimatedProps(() => {
     return {
-      transform: [
-        { translateX: jiggleX.value },
-        { translateY: jiggleY.value }
-      ]
+      transform: `translate(${jiggleX.value}, ${jiggleY.value})`,
     };
   });
 

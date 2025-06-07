@@ -317,7 +317,8 @@ const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
       <Text
         variant="body"
         size={typography.fontSizes.md}
-        style={{ textAlign: 'center', fontWeight: 'bold', color: '#FF4444' }}
+        bold={true}
+        style={{ textAlign: 'center', color: '#FF4444' }}
       >
         This action cannot be undone!
       </Text>

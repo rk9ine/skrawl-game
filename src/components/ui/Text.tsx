@@ -89,9 +89,19 @@ export const Text: React.FC<TextProps> = ({
   return (
     <RNText
       style={[
-        { fontFamily, fontSize, color: textColor },
+        {
+          fontFamily,
+          fontSize,
+          color: textColor,
+          // Ensure consistent text rendering across platforms
+          includeFontPadding: false, // Android only - removes extra padding
+          textAlignVertical: 'center', // Android only - consistent vertical alignment
+          // Prevent font scaling issues
+          allowFontScaling: false,
+        },
         style,
       ]}
+      allowFontScaling={false} // Prevent system font scaling from affecting layout
       {...rest}
     >
       {children}

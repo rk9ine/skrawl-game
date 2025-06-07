@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { ChatInputPosition, useLayoutStore } from '../../store/layoutStore';
 import { Text } from '../ui/Text';
+// Chat service removed - will be reimplemented with new backend
 
 interface MessageInputProps {
   /**
@@ -22,7 +23,13 @@ interface MessageInputProps {
   isRateLimited?: boolean;
 
   /**
-   * Callback when a message is sent
+   * Whether to use real-time chat service
+   * If true, messages will be sent via chat service
+   */
+  useRealTimeChat?: boolean;
+
+  /**
+   * Callback when a message is sent (for non-real-time mode)
    */
   onSendMessage?: (message: string) => void;
 
@@ -35,6 +42,11 @@ interface MessageInputProps {
    * Callback when message changes (for system keyboard)
    */
   onMessageChange?: (message: string) => void;
+
+  /**
+   * Callback when message is cleared (for real-time mode)
+   */
+  onMessageClear?: () => void;
 }
 
 /**
@@ -44,12 +56,40 @@ const MessageInput: React.FC<MessageInputProps> = ({
   position,
   message,
   isRateLimited = false,
+  useRealTimeChat = false,
   onSendMessage,
   onShowKeyboard,
   onMessageChange,
+  onMessageClear,
 }) => {
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { useSystemKeyboard } = useLayoutStore();
+
+  // Real-time chat state
+  const [realTimeRateLimited, setRealTimeRateLimited] = useState(false);
+  const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>();
+
+  // Set up real-time rate limit listeners
+  useEffect(() => {
+    if (!useRealTimeChat) return;
+
+    const unsubscribeRateLimit = chatService.onRateLimitChange((isLimited, remainingTime) => {
+      setRealTimeRateLimited(isLimited);
+      setRateLimitRemaining(remainingTime);
+    });
+
+    // Check initial rate limit status
+    const { isLimited, remainingTime } = chatService.getRateLimitStatus();
+    setRealTimeRateLimited(isLimited);
+    setRateLimitRemaining(remainingTime);
+
+    return () => {
+      unsubscribeRateLimit();
+    };
+  }, [useRealTimeChat]);
+
+  // Determine effective rate limit status
+  const effectiveRateLimited = useRealTimeChat ? realTimeRateLimited : isRateLimited;
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -97,9 +137,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
     },
   });
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      onSendMessage?.(message.trim());
+  const handleSendMessage = async () => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) return;
+
+    if (useRealTimeChat) {
+      // Send via real-time chat service
+      const success = await chatService.sendMessage(trimmedMessage, true);
+      if (success) {
+        // Clear message on successful send
+        onMessageClear?.();
+      }
+    } else {
+      // Use legacy callback
+      onSendMessage?.(trimmedMessage);
     }
   };
 
@@ -190,7 +241,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           style={[
             styles.sendButton,
             {
-              backgroundColor: isRateLimited
+              backgroundColor: effectiveRateLimited
                 ? theme.error
                 : message.trim()
                   ? theme.primary
@@ -199,10 +250,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             }
           ]}
           onPress={handleSendMessage}
-          disabled={!message.trim() || isRateLimited}
+          disabled={!message.trim() || effectiveRateLimited}
         >
           <Ionicons
-            name={isRateLimited ? "time-outline" : "send"}
+            name={effectiveRateLimited ? "time-outline" : "send"}
             size={18}
             color="#FFFFFF"
           />

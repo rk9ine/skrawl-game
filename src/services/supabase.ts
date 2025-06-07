@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Database } from '../types/database';
+// Database types removed - will be recreated with new backend
 import { ENV, validateEnv } from '../config/env';
 
 // Validate environment configuration
 validateEnv();
 
 // Create Supabase client for React Native (based on official docs)
-export const supabase = createClient<Database>(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
+export const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
   auth: {
     // Configure auth settings for React Native
     autoRefreshToken: true,
@@ -47,4 +47,3 @@ export const authConfig = {
 
 // Export types for TypeScript support
 export type SupabaseClient = typeof supabase;
-export type { Database };

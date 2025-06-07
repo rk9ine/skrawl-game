@@ -191,7 +191,7 @@ const SettingsScreen = () => {
 
         <Text
           variant="heading"
-          size={typography.fontSizes.xxl}
+          size={typography.fontSizes.xl}
         >
           Settings
         </Text>
@@ -215,10 +215,8 @@ const SettingsScreen = () => {
             styles.card,
             {
               backgroundColor: theme.surface,
-              borderColor: theme.border,
-              borderRadius: borderRadius.xl,
-              borderWidth: 1,
-              ...applyThemeShadow('sm')
+              borderRadius: borderRadius.lg,
+              ...applyThemeShadow('md')
             }
           ]}>
             <View style={[
@@ -433,10 +431,8 @@ const SettingsScreen = () => {
             styles.card,
             {
               backgroundColor: theme.surface,
-              borderColor: theme.border,
-              borderRadius: borderRadius.xl,
-              borderWidth: 1,
-              ...applyThemeShadow('sm')
+              borderRadius: borderRadius.lg,
+              ...applyThemeShadow('md')
             }
           ]}>
             <View style={[
@@ -577,10 +573,8 @@ const SettingsScreen = () => {
             styles.card,
             {
               backgroundColor: theme.surface,
-              borderColor: theme.border,
-              borderRadius: borderRadius.xl,
-              borderWidth: 1,
-              ...applyThemeShadow('sm')
+              borderRadius: borderRadius.lg,
+              ...applyThemeShadow('md')
             }
           ]}>
             <View style={[

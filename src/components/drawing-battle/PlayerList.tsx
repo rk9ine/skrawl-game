@@ -16,24 +16,7 @@ const defaultAvatarIcons = [
   { icon: 'paw', color: '#795548' },
 ];
 
-// Mock player data for placeholder with rankings and Ionicons avatars
-const getMockPlayers = (currentUserName: string, currentUserAvatar?: string) => [
-  { id: '1', name: 'Player 1', score: 1265, isDrawing: true, isReady: true, avatarIcon: 'brush', avatarColor: '#FF5733' },
-  { id: '2', name: 'Player 2', score: 1195, isDrawing: false, isReady: true, avatarIcon: 'happy', avatarColor: '#33FF57' },
-  { id: '3', name: 'Player 3', score: 915, isDrawing: false, isReady: true, avatarIcon: 'rocket', avatarColor: '#3357FF' },
-  { id: '4', name: 'Player 4', score: 500, isDrawing: false, isReady: false, avatarIcon: 'planet', avatarColor: '#FF33E6' },
-  { id: '5', name: 'Player 5', score: 240, isDrawing: false, isReady: true, avatarIcon: 'star', avatarColor: '#FFD700' },
-  {
-    id: '6',
-    name: currentUserName || 'You',
-    score: 0,
-    isDrawing: false,
-    isReady: true,
-    avatarIcon: currentUserAvatar || 'person',
-    avatarColor: '#4361EE',
-    isCurrentUser: true
-  },
-];
+// No more mock data - PlayerList will only show real players
 
 interface PlayerItem {
   id: string;
@@ -53,10 +36,9 @@ interface PlayerListProps {
   position: PlayerListPosition;
 
   /**
-   * Players to display
-   * If not provided, uses mock data with current user info
+   * Players to display - REQUIRED, no more mock data fallback
    */
-  players?: PlayerItem[];
+  players: PlayerItem[];
 }
 
 /**
@@ -70,12 +52,8 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const { theme, typography, spacing, borderRadius } = useTheme();
   const { user, profile } = useAuthStore();
 
-  // Get current user's profile data
-  const currentUserName = user?.displayName || 'You';
-  const currentUserAvatar = user?.avatar || 'person';
-
-  // If players are not provided, use mock data with current user info
-  const playerData = players || getMockPlayers(currentUserName, currentUserAvatar);
+  // Only use real player data - no mock data fallback
+  const playerData = players;
 
   // Sort players by score (highest first)
   const sortedPlayers = [...playerData].sort((a, b) => b.score - a.score);
@@ -151,7 +129,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
       marginLeft: spacing.xxs, // Reduced spacing
     },
     currentUserText: {
-      fontStyle: 'italic',
+      // Use bold instead of italic for better cross-platform consistency
     }
   });
 
@@ -187,11 +165,9 @@ const PlayerList: React.FC<PlayerListProps> = ({
               <Text
                 variant="heading"
                 size={typography.fontSizes.sm} // Reduced font size
-                color={theme.text}
-                style={[
-                  styles.playerName,
-                  item.isCurrentUser && styles.currentUserText
-                ]}
+                color={item.isCurrentUser ? theme.primary : theme.text}
+                bold={item.isCurrentUser}
+                style={styles.playerName}
                 numberOfLines={1}
               >
                 {item.name}

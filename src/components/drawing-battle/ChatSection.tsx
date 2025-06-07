@@ -1,19 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Text } from '../ui';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { PlayerListPosition } from '../../store/layoutStore';
+// Chat service removed - will be reimplemented with new backend
 
-// Placeholder chat messages - will be replaced with real-time chat
-const placeholderMessages = [
-  { id: '1', sender: 'System', text: 'Game started', isSystem: true, timestamp: new Date().toISOString() },
-  { id: '2', sender: 'Player 1', text: 'Hello everyone!', isSystem: false, timestamp: new Date().toISOString() },
-  { id: '3', sender: 'Player 2', text: 'Hi there!', isSystem: false, timestamp: new Date().toISOString() },
-  { id: '4', sender: 'System', text: 'Player 1 is drawing now', isSystem: true, timestamp: new Date().toISOString() },
-  { id: '5', sender: 'Player 3', text: 'Good luck!', isSystem: false, timestamp: new Date().toISOString() },
-  { id: '6', sender: 'Player 4', text: 'Is it a car?', isSystem: false, timestamp: new Date().toISOString() },
-];
+// No more mock data - ChatSection will only show real messages
 
 interface ChatSectionProps {
   /**
@@ -22,16 +15,9 @@ interface ChatSectionProps {
   position: PlayerListPosition;
 
   /**
-   * Messages to display
-   * If not provided, uses mock data
+   * Whether to use real-time chat service - REQUIRED, no more mock data
    */
-  messages?: Array<{
-    id: string;
-    sender: string;
-    text: string;
-    isSystem: boolean;
-    timestamp: string;
-  }>;
+  useRealTimeChat: boolean;
 }
 
 /**
@@ -39,9 +25,31 @@ interface ChatSectionProps {
  */
 const ChatSection: React.FC<ChatSectionProps> = ({
   position,
-  messages = placeholderMessages,
+  useRealTimeChat,
 }) => {
   const { theme, typography, spacing, borderRadius } = useTheme();
+
+  // Placeholder chat messages for UI testing (real chat will be reimplemented with new backend)
+  const [realTimeMessages, setRealTimeMessages] = useState<any[]>([
+    { id: '1', message: 'Welcome to Drawing Battle!', playerName: 'System', timestamp: Date.now() - 60000, isOwnMessage: false },
+    { id: '2', message: 'cat', playerName: 'Player1', timestamp: Date.now() - 45000, isOwnMessage: false },
+    { id: '3', message: 'dog?', playerName: 'You', timestamp: Date.now() - 30000, isOwnMessage: true },
+    { id: '4', message: 'Good guess!', playerName: 'Player2', timestamp: Date.now() - 15000, isOwnMessage: false },
+  ]);
+
+  // Transform real-time messages to component format
+  const transformedRealTimeMessages = realTimeMessages.map(msg => ({
+    id: msg.id,
+    sender: msg.displayName,
+    text: msg.message,
+    isSystem: false, // Real-time messages are from players
+    timestamp: msg.timestamp,
+    isCorrectGuess: msg.isCorrectGuess,
+    isOwnMessage: msg.isOwnMessage,
+  }));
+
+  // Only use real-time messages - no more mock data fallback
+  const displayMessages = transformedRealTimeMessages;
 
   // Create styles with theme values - skribbl.io inspired (minimal spacing)
   const styles = StyleSheet.create({
@@ -74,11 +82,13 @@ const ChatSection: React.FC<ChatSectionProps> = ({
     },
   });
 
-  const renderMessageItem = ({ item, index }: { item: typeof messages[0], index: number }) => {
-    // Alternating background for player messages: Player 1 & 3 have background, Player 2 & 4 don't
-    // Extract player number from sender name (e.g., "Player 1" -> 1)
-    const playerNumber = item.sender.match(/Player (\d+)/)?.[1];
-    const hasBackground = playerNumber ? parseInt(playerNumber) % 2 === 1 : false;
+  const renderMessageItem = ({ item, index }: { item: typeof displayMessages[0], index: number }) => {
+    // Alternating background for all messages
+    const hasBackground = index % 2 === 0;
+
+    // Special styling for correct guesses and own messages
+    const isCorrectGuess = (item as any).isCorrectGuess;
+    const isOwnMessage = (item as any).isOwnMessage;
 
     return (
       <View
@@ -113,7 +123,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({
             <Text
               variant="body"
               size={typography.fontSizes.sm}
-              color={theme.primary}
+              color={isCorrectGuess ? theme.success : theme.primary}
               bold
             >
               {item.sender}
@@ -121,10 +131,20 @@ const ChatSection: React.FC<ChatSectionProps> = ({
             <Text
               variant="body"
               size={typography.fontSizes.sm}
-              color={theme.text}
+              color={isCorrectGuess ? theme.success : theme.text}
+              style={isCorrectGuess ? { fontWeight: 'bold' } : undefined}
             >
-              {' '}{item.text}
+              {isCorrectGuess ? ' guessed correctly!' : ` ${item.text}`}
             </Text>
+            {isOwnMessage && (
+              <Text
+                variant="body"
+                size={typography.fontSizes.xs}
+                color={theme.textSecondary}
+              >
+                {' (you)'}
+              </Text>
+            )}
           </Text>
         )}
       </View>
@@ -155,7 +175,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({
       </View>
 
       <FlatList
-        data={messages}
+        data={displayMessages}
         renderItem={({ item, index }) => renderMessageItem({ item, index })}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}

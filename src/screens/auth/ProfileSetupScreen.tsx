@@ -288,7 +288,7 @@ const ProfileSetupScreen = () => {
 
           <Text
             variant="heading"
-            size={typography.fontSizes.xxl}
+            size={typography.fontSizes.xl}
           >
             Profile Setup
           </Text>
@@ -296,7 +296,7 @@ const ProfileSetupScreen = () => {
           <View style={{ width: 44 }} />
         </View>
 
-        <ScrollView
+        <Animated.ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={[
             styles.scrollContent,
@@ -523,7 +523,7 @@ const ProfileSetupScreen = () => {
             </TouchableOpacity>
           </View>
           </Animated.View>
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaContainer>
   );

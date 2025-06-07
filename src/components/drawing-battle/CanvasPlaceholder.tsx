@@ -2,6 +2,13 @@ import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../../theme/ThemeContext';
+// Drawing WebSocket service removed - will be reimplemented with new backend
+type DrawingPath = {
+  tool: string;
+  color: string;
+  strokeWidth: number;
+  points: Array<{ x: number; y: number }>;
+};
 
 interface DrawingCanvasProps {
   /**
@@ -20,6 +27,16 @@ interface DrawingCanvasProps {
   currentSize?: number;
 
   /**
+   * Whether the current user can draw (is the drawer)
+   */
+  canDraw?: boolean;
+
+  /**
+   * Whether to enable real-time synchronization
+   */
+  enableRealTime?: boolean;
+
+  /**
    * Callback when undo is triggered from canvas
    */
   onUndo?: () => void;
@@ -28,6 +45,16 @@ interface DrawingCanvasProps {
    * Callback when clear is triggered from canvas
    */
   onClear?: () => void;
+
+  /**
+   * Callback when drawing starts
+   */
+  onDrawingStart?: () => void;
+
+  /**
+   * Callback when drawing ends
+   */
+  onDrawingEnd?: () => void;
 }
 
 // Define the ref interface
@@ -179,6 +206,11 @@ const HTML_CONTENT = `
       function startDrawing(e) {
         e.preventDefault();
 
+        // Check if user can draw in real-time mode
+        if (isRealTimeEnabled && !canUserDraw) {
+          return;
+        }
+
         if (currentTool === 'pen') {
           isDrawing = true;
           const point = getCanvasPoint(e);
@@ -219,6 +251,11 @@ const HTML_CONTENT = `
         if (!isDrawing || currentTool !== 'pen') return;
         e.preventDefault();
 
+        // Check if user can draw in real-time mode
+        if (isRealTimeEnabled && !canUserDraw) {
+          return;
+        }
+
         const point = getCanvasPoint(e);
 
         // Skip points that are too close for performance
@@ -249,6 +286,17 @@ const HTML_CONTENT = `
         if (points.length > 0) {
           currentStroke.points = [...points]; // Save the raw points
           strokes.push(currentStroke);
+
+          // Send drawing data in real-time mode
+          if (isRealTimeEnabled && canUserDraw) {
+            const pathData = {
+              tool: 'brush',
+              color: currentColor,
+              strokeWidth: currentSize,
+              points: points.map(p => [p.x, p.y])
+            };
+            sendDrawingData(pathData);
+          }
         }
 
         // Reset drawing state
@@ -623,6 +671,82 @@ const HTML_CONTENT = `
       // ===== INITIALIZATION =====
       resizeCanvas();
 
+      // ===== REAL-TIME FUNCTIONS =====
+      let isRealTimeEnabled = false;
+      let canUserDraw = true;
+
+      // Function to enable/disable real-time mode
+      window.setRealTimeMode = function(enabled, canDraw) {
+        isRealTimeEnabled = enabled;
+        canUserDraw = canDraw;
+
+        // Update cursor based on drawing permission
+        canvas.style.cursor = canDraw ? 'crosshair' : 'default';
+
+        // Send message to React Native
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'realtime_mode_changed',
+            enabled: enabled,
+            canDraw: canDraw
+          }));
+        }
+      };
+
+      // Function to receive drawing data from other players
+      window.receiveDrawingData = function(pathData) {
+        try {
+          const path = JSON.parse(pathData);
+
+          if (path.tool === 'clear') {
+            clearCanvas();
+            return;
+          }
+
+          if (!path.points || path.points.length < 2) return;
+
+          // Draw the received path
+          ctx.strokeStyle = path.color;
+          ctx.lineWidth = path.strokeWidth;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.globalCompositeOperation = path.tool === 'eraser' ? 'destination-out' : 'source-over';
+
+          ctx.beginPath();
+          ctx.moveTo(path.points[0][0], path.points[0][1]);
+
+          // Draw smooth path using quadratic curves
+          for (let i = 1; i < path.points.length - 1; i++) {
+            const currentPoint = path.points[i];
+            const nextPoint = path.points[i + 1];
+            const controlX = (currentPoint[0] + nextPoint[0]) / 2;
+            const controlY = (currentPoint[1] + nextPoint[1]) / 2;
+
+            ctx.quadraticCurveTo(currentPoint[0], currentPoint[1], controlX, controlY);
+          }
+
+          // Draw to last point
+          if (path.points.length > 1) {
+            const lastPoint = path.points[path.points.length - 1];
+            ctx.lineTo(lastPoint[0], lastPoint[1]);
+          }
+
+          ctx.stroke();
+        } catch (error) {
+          console.error('Error receiving drawing data:', error);
+        }
+      };
+
+      // Function to send drawing data to other players
+      function sendDrawingData(pathData) {
+        if (isRealTimeEnabled && window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'drawing_data',
+            pathData: pathData
+          }));
+        }
+      }
+
       // Expose functions for external control
       window.canvasUndo = undo;
       window.canvasClear = clearCanvas;
@@ -638,8 +762,12 @@ const DrawingCanvas = React.forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   currentTool = 'pen',
   currentColor = '#000000', // skribbl.io default black
   currentSize = 5, // skribbl.io default size
+  canDraw = true,
+  enableRealTime = false,
   onUndo,
   onClear,
+  onDrawingStart,
+  onDrawingEnd,
 }, ref) => {
   const { theme, isDark } = useTheme();
   const webViewRef = useRef<WebView>(null);
@@ -669,6 +797,27 @@ const DrawingCanvas = React.forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       webViewRef.current.injectJavaScript(script);
     }
   }, [theme.canvasBackground]);
+
+  // Set up real-time mode
+  useEffect(() => {
+    if (webViewRef.current) {
+      const script = `
+        if (typeof setRealTimeMode === 'function') {
+          setRealTimeMode(${enableRealTime}, ${canDraw});
+        }
+        true;
+      `;
+      webViewRef.current.injectJavaScript(script);
+    }
+  }, [enableRealTime, canDraw]);
+
+  // Real-time drawing functionality removed - will be reimplemented with new backend
+  useEffect(() => {
+    // Drawing service functionality will be reimplemented
+    return () => {
+      // Cleanup will be implemented with new backend
+    };
+  }, [enableRealTime]);
 
   // Initialize canvas with current values when WebView loads
   const handleWebViewLoad = () => {
@@ -725,7 +874,19 @@ const DrawingCanvas = React.forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         showsVerticalScrollIndicator={false}
         onLoad={handleWebViewLoad}
         onMessage={(event) => {
-          // Handle messages from WebView if needed
+          try {
+            const message = JSON.parse(event.nativeEvent.data);
+
+            if (message.type === 'drawing_data' && enableRealTime && canDraw) {
+              // Drawing service functionality removed - will be reimplemented with new backend
+              onDrawingEnd?.();
+            } else if (message.type === 'realtime_mode_changed') {
+              // Handle real-time mode changes if needed
+              console.log('Real-time mode changed:', message);
+            }
+          } catch (error) {
+            console.error('Error parsing WebView message:', error);
+          }
         }}
       />
     </View>

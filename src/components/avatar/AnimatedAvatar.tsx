@@ -96,8 +96,7 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
   // Create animated props for the container group
   const animatedProps = useAnimatedProps(() => {
     return {
-      translateY: translateY.value,
-      scale: scale.value,
+      transform: `translate(0, ${translateY.value}) scale(${scale.value})`,
     };
   });
 

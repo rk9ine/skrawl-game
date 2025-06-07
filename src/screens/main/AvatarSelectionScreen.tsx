@@ -302,7 +302,7 @@ const AvatarSelectionScreen = () => {
           variant="heading"
           size={typography.fontSizes.xl}
         >
-          Choose Your Avatar
+          Choose Avatar
         </Text>
 
         <View style={{ width: 44 }} />

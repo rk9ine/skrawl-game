@@ -344,15 +344,25 @@ const SkiaCanvasTestScreen = () => {
     <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
-        <TouchableOpacity onPress={handleBack}>
+        <TouchableOpacity
+          style={[
+            styles.backButton,
+            {
+              backgroundColor: theme.backgroundAlt,
+              borderRadius: borderRadius.round / 2,
+              ...applyThemeShadow('sm')
+            }
+          ]}
+          onPress={handleBack}
+        >
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
 
-        <Text variant="heading">
+        <Text variant="heading" size={typography.fontSizes.xl}>
           Whiteboard
         </Text>
 
-        <View style={{ width: 24 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       {/* Main Content Container with Overlay Positioning */}
@@ -673,6 +683,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   content: {

@@ -11,7 +11,8 @@
     "build:android": "eas build --platform android --profile development",
     "build:ios": "eas build --platform ios --profile development",
     "setup-env": "node scripts/setup-env.js",
-    "check-env": "node scripts/check-env.js"
+    "check-env": "node scripts/check-env.js",
+    "websocket-server": "node start-websocket-server.js"
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",

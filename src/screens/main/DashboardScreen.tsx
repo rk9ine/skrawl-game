@@ -51,18 +51,15 @@ const DashboardScreen = () => {
   const cardAnimations = useRef<{ [key: string]: Animated.Value }>({
     'drawing-battle': new Animated.Value(1),
     'whiteboard': new Animated.Value(1),
-    'leaderboard': new Animated.Value(1),
   }).current;
 
   // State for layout
   const [contentHeight, setContentHeight] = useState(0);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
 
-  // Determine grid layout based on screen width
+  // Use single column layout for consistency with GameModeSelectionScreen
   const getNumColumns = () => {
-    if (width > 900) return 3; // Large tablets/desktop: 3 columns
-    if (width > 600) return 2; // Medium tablets: 2 columns
-    return 1; // Phones: 1 column
+    return 1; // Always use single column for better consistency
   };
 
   // Handle content layout to ensure it fits on screen
@@ -95,8 +92,8 @@ const DashboardScreen = () => {
       title: 'Drawing Battle',
       description: 'Compete with other players in real-time drawing games',
       icon: 'people',
-      iconColor: theme.primary,
-      iconBgColor: theme.primary + '20',
+      iconColor: '#FFFFFF',
+      iconBgColor: theme.primary,
       navigateTo: 'GameModeSelection',
       requiresAuth: true,
     },
@@ -105,18 +102,9 @@ const DashboardScreen = () => {
       title: 'Whiteboard',
       description: 'Advanced drawing canvas with Skia rendering',
       icon: 'brush',
-      iconColor: theme.secondary,
-      iconBgColor: theme.secondary + '20',
+      iconColor: '#FFFFFF',
+      iconBgColor: theme.secondary,
       navigateTo: 'SkiaCanvasTest',
-    },
-    {
-      id: 'leaderboard',
-      title: 'Leaderboard',
-      description: 'View top players and your ranking',
-      icon: 'trophy',
-      iconColor: theme.warning,
-      iconBgColor: theme.warning + '20',
-      navigateTo: 'Leaderboard',
     },
   ];
 
@@ -162,8 +150,6 @@ const DashboardScreen = () => {
     return (
       <Animated.View
         style={{
-          flex: 1,
-          margin: spacing.xs,
           transform: [{ scale: cardAnimation }]
         }}
       >
@@ -171,38 +157,39 @@ const DashboardScreen = () => {
           style={[
             styles.card,
             {
-              backgroundColor: theme.surface,
+              backgroundColor: item.iconBgColor,
               borderRadius: borderRadius.lg,
-              borderColor: theme.border,
-              borderWidth: 1,
-              ...Platform.select({
-                ios: applyThemeShadow('md'),
-                android: applyThemeShadow('md')
-              })
+              ...applyThemeShadow('md')
             }
           ]}
           onPress={() => handleCardPress(item)}
           activeOpacity={0.7}
         >
-          <View style={[styles.cardIconContainer, { backgroundColor: item.iconBgColor }]}>
-            <CustomIcon name={item.icon as any} size={32} color={item.iconColor} />
-          </View>
+          <CustomIcon
+            name={item.icon as any}
+            size={32}
+            color={item.iconColor}
+            style={styles.cardIcon}
+          />
           <View style={styles.cardContent}>
             <Text
               variant="heading"
               size={typography.fontSizes.lg}
-              style={{ marginBottom: spacing.xxs }}
+              color={item.iconColor}
+              style={styles.cardTitle}
             >
               {item.title}
             </Text>
             <Text
               variant="body"
-              color={theme.textSecondary}
               size={typography.fontSizes.sm}
+              color={item.iconColor}
+              style={styles.cardDescription}
             >
               {item.description}
             </Text>
           </View>
+          <CustomIcon name="chevron-forward" size={24} color={item.iconColor} />
         </TouchableOpacity>
       </Animated.View>
     );
@@ -210,13 +197,23 @@ const DashboardScreen = () => {
 
   return (
     <SafeAreaContainer style={styles.container} edges={['top', 'bottom']}>
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
-        <Text
-          variant="heading"
-          size={typography.fontSizes.xxxl}
-        >
-          Skrawl
-        </Text>
+      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }]}>
+        <View style={styles.headerLeft}>
+          <Text
+            variant="heading"
+            size={typography.fontSizes.xxxl}
+            style={{ marginBottom: spacing.xxs }}
+          >
+            Skrawl
+          </Text>
+          <Text
+            variant="body"
+            size={typography.fontSizes.md}
+            color={theme.textSecondary}
+          >
+            Welcome back, {profile?.displayName || 'Player'}!
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[
@@ -230,10 +227,10 @@ const DashboardScreen = () => {
         >
           <UserAvatar
             avatarData={profile?.avatar}
-            size={42}
+            size={48}
             style={{
-              borderRadius: 21,
-              ...applyThemeShadow('sm')
+              borderRadius: 24,
+              ...applyThemeShadow('md')
             }}
           />
         </TouchableOpacity>
@@ -250,21 +247,14 @@ const DashboardScreen = () => {
         ]}
         onLayout={handleContentLayout}
       >
-        <View style={styles.welcomeContainer}>
+        {/* Game Modes Section */}
+        <View style={styles.gameModesSection}>
           <Text
             variant="heading"
             size={typography.fontSizes.xl}
-            style={{ marginBottom: spacing.xs, textAlign: 'center' }}
+            style={{ textAlign: 'center', marginBottom: spacing.xl }}
           >
-            Welcome to Skrawl
-          </Text>
-
-          <Text
-            variant="body"
-            color={theme.textSecondary}
-            style={{ textAlign: 'center', marginBottom: spacing.lg }}
-          >
-            Choose a mode to start drawing
+            Choose Your Adventure
           </Text>
         </View>
 
@@ -292,23 +282,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     width: '100%',
   },
+  headerLeft: {
+    flex: 1,
+  },
   settingsButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 16,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
-  welcomeContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+  gameModesSection: {
+    marginBottom: 24,
   },
   gridContainer: {
     width: '100%',
@@ -322,23 +315,22 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
-    padding: 16,
-    flex: 1,
     alignItems: 'center',
-    minHeight: 100,
-    overflow: 'hidden', // Ensures content doesn't overflow rounded corners
+    padding: 20,
+    minHeight: 80,
+    marginBottom: 16,
   },
-  cardIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+  cardIcon: {
     marginRight: 16,
   },
   cardContent: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  cardTitle: {
+    marginBottom: 4,
+  },
+  cardDescription: {
+    opacity: 0.9,
   },
 });
 

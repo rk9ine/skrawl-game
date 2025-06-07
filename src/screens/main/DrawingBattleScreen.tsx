@@ -6,12 +6,14 @@ import {
   Platform,
   ScaledSize,
 } from 'react-native';
+import { Text } from '../../components/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from '../../types/navigation';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useAuthStore } from '../../store/authStore';
+// Game services removed - will be reimplemented with new backend
 import {
   DrawingCanvas,
   DrawingToolbar,
@@ -24,6 +26,7 @@ import {
   ReactionOverlay,
   PrivateModeOverlay,
 } from '../../components/drawing-battle';
+import WordSelectionModal from '../../components/drawing-battle/WordSelectionModal';
 
 type DrawingBattleScreenRouteProp = RouteProp<MainStackParamList, 'DrawingBattle'>;
 
@@ -33,6 +36,11 @@ const DrawingBattleScreen = () => {
   const route = useRoute<DrawingBattleScreenRouteProp>();
   const { chatInputPosition, useSystemKeyboard } = useLayoutStore();
   const { user, profile } = useAuthStore();
+  // Game store functionality removed - will be reimplemented with new backend
+  const currentGame = null;
+  const isConnectedToRealtime = false;
+  const currentUserId = user?.id || null;
+  const isCurrentUserDrawer = false;
 
   // Get route parameters
   const { privateMode = false } = route.params || {};
@@ -110,9 +118,13 @@ const DrawingBattleScreen = () => {
   // State
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isPrivateModeOverlayVisible, setIsPrivateModeOverlayVisible] = useState(privateMode);
-  const [timeRemaining, setTimeRemaining] = useState(60);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [currentWord, setCurrentWord] = useState('house');
+  const [isWordSelectionVisible, setIsWordSelectionVisible] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(currentGame?.roundDuration || 80);
+
+  // Use real game state instead of mock data
+  const currentRound = currentGame?.currentRound || 1;
+  const currentWord = currentGame?.currentWord || '';
+  const totalRounds = currentGame?.maxRounds || 3;
   const [isLandscape, setIsLandscape] = useState(
     Dimensions.get('window').width > Dimensions.get('window').height
   );
@@ -140,71 +152,55 @@ const DrawingBattleScreen = () => {
   // Reaction state
   const [userReaction, setUserReaction] = useState<'like' | 'dislike' | null>(null);
 
-  // Generate custom player data with current user's profile
+  // Generate real player data from game state
   const getCustomPlayerData = useCallback(() => {
-    // If user is not logged in or skipped, return undefined to use default mock data
-    if (!user) return undefined;
-
-    // Create a custom player list with the current user's profile data
-    return [
+    // Return placeholder data for UI testing (real game data will be implemented with new backend)
+    const placeholderPlayers = [
       {
-        id: '1',
-        name: 'Player 1',
-        score: 1265,
+        id: 'current-user',
+        name: profile?.displayName || 'You',
+        score: 150,
         isDrawing: true,
         isReady: true,
-        avatarIcon: 'brush',
-        avatarColor: '#FF5733'
-      },
-      {
-        id: '2',
-        name: 'Player 2',
-        score: 1195,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'happy',
-        avatarColor: '#33FF57'
-      },
-      {
-        id: '3',
-        name: 'Player 3',
-        score: 915,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'rocket',
-        avatarColor: '#3357FF'
-      },
-      {
-        id: '4',
-        name: 'Player 4',
-        score: 500,
-        isDrawing: false,
-        isReady: false,
-        avatarIcon: 'planet',
-        avatarColor: '#FF33E6'
-      },
-      {
-        id: '5',
-        name: 'Player 5',
-        score: 240,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'star',
-        avatarColor: '#FFD700'
-      },
-      {
-        id: '6',
-        name: user.displayName || 'You',
-        score: 0,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: user.avatar || 'person',
+        avatarIcon: 'person',
         avatarColor: '#4361EE',
         isCurrentUser: true,
         avatarData: profile?.avatar
       },
+      {
+        id: 'player-2',
+        name: 'ArtMaster',
+        score: 120,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'brush',
+        avatarColor: '#FF5733',
+        isCurrentUser: false
+      },
+      {
+        id: 'player-3',
+        name: 'SketchKing',
+        score: 95,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'star',
+        avatarColor: '#33FF57',
+        isCurrentUser: false
+      },
+      {
+        id: 'player-4',
+        name: 'DrawingQueen',
+        score: 80,
+        isDrawing: false,
+        isReady: true,
+        avatarIcon: 'heart',
+        avatarColor: '#FF33E6',
+        isCurrentUser: false
+      }
     ];
-  }, [user]);
+
+    return placeholderPlayers;
+  }, [user, profile]);
 
 
 
@@ -235,6 +231,25 @@ const DrawingBattleScreen = () => {
     // Get custom player data with current user's profile
     const customPlayerData = getCustomPlayerData();
 
+    // Only render if we have real player data
+    if (!customPlayerData || customPlayerData.length === 0) {
+      return (
+        <View style={styles.landscapeLayout}>
+          <View style={styles.playerListContainer}>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: theme.textSecondary }}>Loading players...</Text>
+            </View>
+          </View>
+          <View style={styles.chatSectionContainer}>
+            <ChatSection
+              position={playerListPosition === 'left' ? 'right' : 'left'}
+              useRealTimeChat={isConnectedToRealtime}
+            />
+          </View>
+        </View>
+      );
+    }
+
     // Use different layouts based on orientation
     if (isLandscape) {
       // In landscape mode, use a vertical layout (side by side)
@@ -247,7 +262,10 @@ const DrawingBattleScreen = () => {
             />
           </View>
           <View style={styles.chatSectionContainer}>
-            <ChatSection position={playerListPosition === 'left' ? 'right' : 'left'} />
+            <ChatSection
+              position={playerListPosition === 'left' ? 'right' : 'left'}
+              useRealTimeChat={isConnectedToRealtime}
+            />
           </View>
         </View>
       );
@@ -262,7 +280,10 @@ const DrawingBattleScreen = () => {
             />
           </View>
           <View style={styles.chatSectionContainer}>
-            <ChatSection position={playerListPosition === 'left' ? 'right' : 'left'} />
+            <ChatSection
+              position={playerListPosition === 'left' ? 'right' : 'left'}
+              useRealTimeChat={isConnectedToRealtime}
+            />
           </View>
         </View>
       );
@@ -331,7 +352,7 @@ const DrawingBattleScreen = () => {
     });
   };
 
-  const handleSendMessage = (message?: string) => {
+  const handleSendMessage = async (message?: string) => {
     const messageToSend = message || currentMessage;
     if (!messageToSend.trim()) return;
 
@@ -366,8 +387,12 @@ const DrawingBattleScreen = () => {
       setMessageCount(prev => prev + 1);
     }
 
-    // Send the message
+    // Send the message to real-time service
     console.log('Sending message:', messageToSend);
+
+    // Chat service functionality removed - will be reimplemented with new backend
+    console.log('💬 Message would be sent:', messageToSend, '(chat service will be implemented with new backend)');
+
     setCurrentMessage('');
     setIsKeyboardVisible(false);
   };
@@ -382,6 +407,51 @@ const DrawingBattleScreen = () => {
     if (text.length <= 50) {
       setCurrentMessage(text);
     }
+  };
+
+  // Handle message clear (for real-time mode)
+  const handleMessageClear = () => {
+    setCurrentMessage('');
+    setIsKeyboardVisible(false);
+  };
+
+  // Game logic effects
+  useEffect(() => {
+    // Show word selection modal when user becomes the drawer
+    if (isCurrentUserDrawer && currentGame?.status === 'waiting') {
+      setIsWordSelectionVisible(true);
+    }
+  }, [isCurrentUserDrawer, currentGame?.status]);
+
+  // Word selection handler
+  const handleWordSelected = async (word: string) => {
+    // Game logic service removed - will be reimplemented with new backend
+    setIsWordSelectionVisible(false);
+    setCurrentWord(word);
+    console.log(`Word selected: ${word} - game logic will be implemented with new backend`);
+  };
+
+  // Handle round timer
+  useEffect(() => {
+    if (currentGame?.status !== 'in_progress' || timeRemaining <= 0) return;
+
+    const timer = setTimeout(() => {
+      setTimeRemaining(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          // Round ended
+          handleRoundEnd();
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [timeRemaining, currentGame?.status]);
+
+  const handleRoundEnd = async () => {
+    // Game logic service removed - will be reimplemented with new backend
+    console.log('Round ended - game logic will be implemented with new backend');
   };
 
   // Handle exit game
@@ -433,7 +503,7 @@ const DrawingBattleScreen = () => {
       {/* Top Bar - with consistent height and padding across platforms */}
       <TopBar
         round={currentRound}
-        totalRounds={5}
+        totalRounds={totalRounds}
         word={currentWord}
         timeRemaining={timeRemaining}
         onOpenSettings={() => setIsSettingsModalVisible(true)}
@@ -448,8 +518,12 @@ const DrawingBattleScreen = () => {
             currentTool={currentTool}
             currentColor={currentColor}
             currentSize={currentSize}
+            canDraw={isCurrentUserDrawer}
+            enableRealTime={isConnectedToRealtime}
             onUndo={handleUndo}
             onClear={handleClear}
+            onDrawingStart={() => console.log('Drawing started')}
+            onDrawingEnd={() => console.log('Drawing ended')}
           />
 
           {/* Reaction Overlay - positioned over canvas */}
@@ -479,9 +553,11 @@ const DrawingBattleScreen = () => {
             position="top"
             message={currentMessage}
             isRateLimited={rateLimitCooldown}
+            useRealTimeChat={isConnectedToRealtime}
             onSendMessage={handleSendMessage}
             onShowKeyboard={handleShowKeyboard}
             onMessageChange={handleMessageChange}
+            onMessageClear={handleMessageClear}
           />
         )}
 
@@ -494,9 +570,11 @@ const DrawingBattleScreen = () => {
             position="bottom"
             message={currentMessage}
             isRateLimited={rateLimitCooldown}
+            useRealTimeChat={isConnectedToRealtime}
             onSendMessage={handleSendMessage}
             onShowKeyboard={handleShowKeyboard}
             onMessageChange={handleMessageChange}
+            onMessageClear={handleMessageClear}
           />
         )}
       </View>
@@ -526,6 +604,15 @@ const DrawingBattleScreen = () => {
         visible={isPrivateModeOverlayVisible}
         onDismiss={handleDismissPrivateMode}
         onStartGame={handleStartPrivateGame}
+      />
+
+      {/* Word Selection Modal */}
+      <WordSelectionModal
+        visible={isWordSelectionVisible}
+        onWordSelected={handleWordSelected}
+        onDismiss={() => setIsWordSelectionVisible(false)}
+        difficulty="medium"
+        timeLimit={15}
       />
     </SafeAreaView>
   );
