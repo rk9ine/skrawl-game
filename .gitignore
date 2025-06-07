@@ -1,38 +1,57 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Root .gitignore for Skrawl project
 
-# dependencies
+# Dependencies
 node_modules/
+*/node_modules/
 
-# Expo
-.expo/
+# Build outputs
 dist/
-web-build/
-expo-env.d.ts
+*/dist/
+build/
+*/build/
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Environment files
+.env
+.env.local
+.env.*.local
+*/.env
+*/.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo (React Native)
+Skrawl/.expo/
+Skrawl/web-build/
+Skrawl/expo-env.d.ts
+
+# Native builds
+Skrawl/*.orig.*
+Skrawl/*.jks
+Skrawl/*.p8
+Skrawl/*.p12
+Skrawl/*.key
+Skrawl/*.mobileprovision
 
 # Metro
-.metro-health-check*
+Skrawl/.metro-health-check*
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env
-.env*.local
-
-# typescript
+# TypeScript
 *.tsbuildinfo
+
+# WebSocket Server specific
+skrawl-websocket-server/.env
+skrawl-websocket-server/dist/
