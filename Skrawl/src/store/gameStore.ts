@@ -57,6 +57,7 @@ interface GameState {
 }
 
 interface ChatMessage {
+  id?: string; // Optional unique identifier for the message
   playerId: string;
   playerName: string;
   message: string;
@@ -109,6 +110,9 @@ interface GameStoreState {
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
+  leaveRoom: () => void;
+  clearGameState: () => void;
+  setupWebSocketEventHandlers: () => void;
 }
 
 export const useGameStore = create<GameStoreState>()(
@@ -140,19 +144,22 @@ export const useGameStore = create<GameStoreState>()(
           
           if (connected) {
             setConnectionStatus('connected');
-            
+
+            // Set up WebSocket event handlers for Phase 2
+            get().setupWebSocketEventHandlers();
+
             // Set up latency monitoring
             const updateLatency = () => {
               const latency = gameWebSocketService.getLatency();
               setLatency(latency);
             };
-            
+
             // Update latency every 5 seconds
             const latencyInterval = setInterval(updateLatency, 5000);
-            
+
             // Store interval for cleanup
             (get() as any).latencyInterval = latencyInterval;
-            
+
             return true;
           } else {
             setConnectionStatus('error', 'Failed to connect to game server');
@@ -244,25 +251,22 @@ export const useGameStore = create<GameStoreState>()(
         }, 3000);
       },
 
-      leaveRoom: (): void => {
-        // TODO: Implement in Phase 2
-        set({
-          currentRoom: null,
-          isInRoom: false,
-          isHost: false,
-          gameState: null,
-          isInGame: false,
-          players: [],
-          chatMessages: []
-        });
-      },
+      // Removed duplicate leaveRoom - using the one below
 
       sendChatMessage: (message: string): void => {
-        // TODO: Implement in Phase 4
+        const { isConnected } = get();
+
+        if (!isConnected) {
+          console.error('Cannot send chat message - not connected to game server');
+          return;
+        }
+
         console.log('Sending chat message:', message);
+        gameWebSocketService.sendLobbyMessage(message);
       },
 
       clearChatMessages: (): void => {
+        console.log('🧹 Clearing chat messages (industry standard: session-only)');
         set({ chatMessages: [] });
       },
 
@@ -295,9 +299,25 @@ export const useGameStore = create<GameStoreState>()(
       },
 
       addChatMessage: (message: ChatMessage): void => {
-        set(state => ({
-          chatMessages: [...state.chatMessages, message].slice(-100) // Keep last 100 messages
-        }));
+        set(state => {
+          // Prevent duplicate messages by checking ID or timestamp+playerId combination
+          const isDuplicate = state.chatMessages.some(existing =>
+            (message.id && existing.id === message.id) ||
+            (!message.id && existing.playerId === message.playerId &&
+             existing.timestamp === message.timestamp &&
+             existing.message === message.message)
+          );
+
+          if (isDuplicate) {
+            console.log('🚫 Duplicate message prevented:', message);
+            return state; // Don't add duplicate
+          }
+
+          return {
+            // No message limit - messages are session-only and will be cleared when leaving room
+            chatMessages: [...state.chatMessages, message]
+          };
+        });
       },
 
       updatePlayer: (playerId: string, updates: Partial<Player>): void => {
@@ -318,14 +338,116 @@ export const useGameStore = create<GameStoreState>()(
         set(state => ({
           players: state.players.filter(player => player.id !== playerId)
         }));
+      },
+
+      // Room management actions
+      leaveRoom: (): void => {
+        const { isConnected } = get();
+
+        if (isConnected) {
+          gameWebSocketService.leaveRoom();
+        }
+
+        // Clear room state immediately (industry standard: no message persistence)
+        console.log('🧹 Clearing room state and chat messages (session ended)');
+        set({
+          currentRoom: null,
+          isInRoom: false,
+          isHost: false,
+          players: [],
+          chatMessages: [], // Industry standard: messages are session-only
+          isJoiningGame: false, // Reset joining state
+          isCreatingRoom: false // Reset creating state
+        });
+      },
+
+      clearGameState: (): void => {
+        set({
+          gameState: null,
+          isInGame: false,
+          currentRoom: null,
+          isInRoom: false,
+          isHost: false,
+          players: [],
+          chatMessages: [],
+          isJoiningGame: false,
+          isCreatingRoom: false
+        });
+      },
+
+      // Set up WebSocket event handlers for Phase 2
+      setupWebSocketEventHandlers: (): void => {
+        console.log('🔌 Setting up WebSocket event handlers...');
+
+        // Set up lobby message handler
+        gameWebSocketService.onLobbyMessage = (message: any) => {
+          console.log('📨 Received lobby message in store:', message);
+          get().addChatMessage(message);
+        };
+
+        // Set up room joined handler (initial player list)
+        gameWebSocketService.onRoomJoined = (roomData: any) => {
+          console.log('🏠 Room joined in store:', roomData);
+
+          // Transform all initial players to game store format
+          if (roomData.players && Array.isArray(roomData.players)) {
+            const transformedPlayers = roomData.players.map((player: any) => ({
+              id: player.id,
+              socketId: player.socketId,
+              displayName: player.displayName,
+              avatar: player.avatar, // Preserve avatar data from server
+              score: player.score || 0,
+              totalScore: player.totalScore || 0,
+              isReady: player.isReady || false,
+              isDrawing: player.isDrawing || false,
+              hasGuessed: player.hasGuessed || false,
+              isConnected: player.isConnected !== false, // Default to true
+              joinedAt: player.joinedAt ? new Date(player.joinedAt) : new Date(),
+              lastActivity: player.lastActivity ? new Date(player.lastActivity) : new Date()
+            }));
+
+            // Set all players at once
+            set({ players: transformedPlayers });
+            console.log('👥 Set initial players:', transformedPlayers);
+          }
+        };
+
+        // Set up player join handler (new players joining after room creation)
+        gameWebSocketService.onPlayerJoined = (player: any) => {
+          console.log('👤 Player joined in store:', player);
+
+          // Transform server player to game store format with complete data
+          const gamePlayer = {
+            id: player.id,
+            socketId: player.socketId,
+            displayName: player.displayName,
+            avatar: player.avatar, // Preserve avatar data from server
+            score: player.score || 0,
+            totalScore: player.totalScore || 0,
+            isReady: player.isReady || false,
+            isDrawing: player.isDrawing || false,
+            hasGuessed: player.hasGuessed || false,
+            isConnected: player.isConnected !== false, // Default to true
+            joinedAt: player.joinedAt ? new Date(player.joinedAt) : new Date(),
+            lastActivity: player.lastActivity ? new Date(player.lastActivity) : new Date()
+          };
+
+          get().addPlayer(gamePlayer);
+        };
+
+        // Set up player leave handler
+        gameWebSocketService.onPlayerLeft = (playerId: string) => {
+          console.log('👋 Player left in store:', playerId);
+          get().removePlayer(playerId);
+        };
       }
     }),
     {
       name: 'skrawl-game-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        // Only persist non-sensitive, non-connection state
-        chatMessages: state.chatMessages.slice(-10), // Keep last 10 messages
+        // No chat message persistence - messages are session-only for skribbl.io-style games
+        // Only persist non-sensitive, non-connection state if needed in future
       }),
     }
   )

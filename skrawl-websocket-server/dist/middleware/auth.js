@@ -154,15 +154,31 @@ function createPlayerFromSocket(socket) {
         throw new Error('Socket not authenticated');
     }
     const profile = socket.userProfile;
+    // Handle avatar data - it can be a simple string (like "Cat", "Pirate") or JSON
+    let avatarData = undefined;
+    if (profile.avatar_data) {
+        // If it's already a string (simple avatar name), use it directly
+        if (typeof profile.avatar_data === 'string') {
+            avatarData = {
+                type: 'custom',
+                data: profile.avatar_data
+            };
+        }
+        else if (typeof profile.avatar_data === 'object') {
+            // If it's an object, use it as-is
+            const avatarType = profile.avatar_data.type;
+            avatarData = {
+                type: (avatarType === 'gif' || avatarType === 'icon' || avatarType === 'custom') ? avatarType : 'custom',
+                data: profile.avatar_data.data || profile.avatar_data.value || 'person',
+                backgroundColor: profile.avatar_data.backgroundColor
+            };
+        }
+    }
     return {
         id: socket.userId,
         socketId: socket.id,
         displayName: profile.display_name,
-        avatar: profile.avatar_data ? {
-            type: profile.avatar_data.type || 'icon',
-            data: profile.avatar_data.data || 'person',
-            backgroundColor: profile.avatar_data.backgroundColor
-        } : undefined,
+        avatar: avatarData,
         score: 0,
         totalScore: profile.total_score || 0,
         isReady: false,

@@ -13,6 +13,8 @@ const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_1 = require("./middleware/auth");
+const roomService_1 = require("./services/roomService");
+const lobbyService_1 = require("./services/lobbyService");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -70,14 +72,28 @@ const io = new socket_io_1.Server(server, {
 });
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        connections: io.engine.clientsCount,
-        memory: process.memoryUsage(),
-        version: process.env.npm_package_version || '1.0.0'
-    });
+    try {
+        const roomStats = roomService_1.RoomService.getStats();
+        const lobbyStats = lobbyService_1.LobbyService.getStats();
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            connections: io.engine.clientsCount,
+            memory: process.memoryUsage(),
+            version: process.env.npm_package_version || '1.0.0',
+            rooms: roomStats,
+            lobbies: lobbyStats,
+            phase: 'Phase 2 - Room Management'
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            status: 'error',
+            timestamp: new Date().toISOString(),
+            error: 'Failed to get server stats'
+        });
+    }
 });
 // Server info endpoint
 app.get('/info', (req, res) => {
@@ -117,24 +133,249 @@ io.on('connection', (socket) => {
         // Already authenticated by middleware, just confirm
         socket.emit('authenticated', true);
     });
-    // Basic room management (Phase 2 will expand this)
-    socket.on('join_public_game', () => {
-        console.log(`🎮 ${socket.userProfile?.display_name} wants to join public game`);
-        // TODO: Implement in Phase 2
-        socket.emit('error', {
-            code: 'NOT_IMPLEMENTED',
-            message: 'Public game joining will be implemented in Phase 2',
-            timestamp: Date.now()
-        });
+    // Phase 2: Room Management Implementation
+    // Join public game
+    socket.on('join_public_game', async () => {
+        try {
+            console.log(`🎮 ${socket.userProfile?.display_name} joining public game`);
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const { room, isNewRoom } = await roomService_1.RoomService.joinPublicGame(player);
+            // Join socket room
+            socket.join(room.id);
+            // Send room data to player
+            socket.emit('room_joined', {
+                roomId: room.id,
+                gameState: room.gameState,
+                players: Array.from(room.players.values()),
+                isHost: false, // Public games have no host
+                canvasState: undefined // No canvas state in lobby
+            });
+            // Notify other players
+            socket.to(room.id).emit('player_joined', player);
+            // Handle lobby join and broadcast system message
+            const joinMessage = lobbyService_1.LobbyService.handlePlayerJoin(room.id, player);
+            // Broadcast join system message to ALL players in room (including new player)
+            io.to(room.id).emit('lobby_message', joinMessage);
+            // Industry standard: No message history for new players
+            // Players start with clean chat - only see messages from current session
+            console.log(`✅ ${player.displayName} joined public room ${room.id}`);
+        }
+        catch (error) {
+            console.error(`❌ Failed to join public game:`, error);
+            socket.emit('error', {
+                code: 'JOIN_FAILED',
+                message: error instanceof Error ? error.message : 'Failed to join public game',
+                timestamp: Date.now()
+            });
+        }
     });
-    socket.on('create_private_room', (settings) => {
-        console.log(`🏠 ${socket.userProfile?.display_name} wants to create private room`);
-        // TODO: Implement in Phase 2
-        socket.emit('error', {
-            code: 'NOT_IMPLEMENTED',
-            message: 'Private room creation will be implemented in Phase 2',
-            timestamp: Date.now()
-        });
+    // Create private room
+    socket.on('create_private_room', async (settings) => {
+        try {
+            console.log(`🏠 ${socket.userProfile?.display_name} creating private room`);
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const room = await roomService_1.RoomService.createPrivateRoom(player, settings);
+            // Join socket room
+            socket.join(room.id);
+            // Send room creation confirmation
+            socket.emit('room_created', {
+                roomId: room.id,
+                inviteLink: `skrawl://join/${room.inviteCode}`,
+                settings: room.gameState.settings
+            });
+            // Send room data
+            socket.emit('room_joined', {
+                roomId: room.id,
+                gameState: room.gameState,
+                players: Array.from(room.players.values()),
+                isHost: true,
+                canvasState: undefined
+            });
+            // Handle lobby join
+            lobbyService_1.LobbyService.handlePlayerJoin(room.id, player);
+            console.log(`✅ ${player.displayName} created private room ${room.id} with invite code ${room.inviteCode}`);
+        }
+        catch (error) {
+            console.error(`❌ Failed to create private room:`, error);
+            socket.emit('error', {
+                code: 'CREATE_FAILED',
+                message: error instanceof Error ? error.message : 'Failed to create private room',
+                timestamp: Date.now()
+            });
+        }
+    });
+    // Join private room
+    socket.on('join_private_room', async (roomId) => {
+        try {
+            console.log(`🏠 ${socket.userProfile?.display_name} joining private room ${roomId}`);
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const room = await roomService_1.RoomService.joinPrivateRoom(player, roomId);
+            // Join socket room
+            socket.join(room.id);
+            // Send room data to player
+            socket.emit('room_joined', {
+                roomId: room.id,
+                gameState: room.gameState,
+                players: Array.from(room.players.values()),
+                isHost: room.hostId === player.id,
+                canvasState: undefined
+            });
+            // Notify other players
+            socket.to(room.id).emit('player_joined', player);
+            // Handle lobby join and broadcast system message
+            const joinMessage = lobbyService_1.LobbyService.handlePlayerJoin(room.id, player);
+            // Broadcast join system message to ALL players in room (including new player)
+            io.to(room.id).emit('lobby_message', joinMessage);
+            // Industry standard: No message history for new players
+            // Players start with clean chat - only see messages from current session
+            console.log(`✅ ${player.displayName} joined private room ${room.id}`);
+        }
+        catch (error) {
+            console.error(`❌ Failed to join private room:`, error);
+            socket.emit('error', {
+                code: 'JOIN_FAILED',
+                message: error instanceof Error ? error.message : 'Failed to join private room',
+                timestamp: Date.now()
+            });
+        }
+    });
+    // Leave room
+    socket.on('leave_room', () => {
+        try {
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const room = roomService_1.RoomService.getPlayerRoom(player.id);
+            if (room) {
+                console.log(`🚪 ${player.displayName} leaving room ${room.id}`);
+                // Leave socket room
+                socket.leave(room.id);
+                // Handle lobby leave and broadcast system message
+                const leaveMessage = lobbyService_1.LobbyService.handlePlayerLeave(room.id, player.id);
+                // Remove from room service
+                roomService_1.RoomService.leaveRoom(player.id);
+                // Notify other players
+                socket.to(room.id).emit('player_left', player.id, 'left');
+                // Broadcast leave system message to remaining players
+                if (leaveMessage) {
+                    socket.to(room.id).emit('lobby_message', leaveMessage);
+                }
+                console.log(`✅ ${player.displayName} left room ${room.id}`);
+            }
+        }
+        catch (error) {
+            console.error(`❌ Failed to leave room:`, error);
+        }
+    });
+    // Lobby event handlers
+    // Lobby chat
+    socket.on('lobby_chat', (message) => {
+        try {
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const lobbyMessage = lobbyService_1.LobbyService.sendLobbyMessage(player.id, message);
+            if (lobbyMessage) {
+                const room = roomService_1.RoomService.getPlayerRoom(player.id);
+                if (room) {
+                    // Broadcast to all players in room
+                    io.to(room.id).emit('lobby_message', lobbyMessage);
+                }
+            }
+        }
+        catch (error) {
+            console.error(`❌ Lobby chat error:`, error);
+        }
+    });
+    // Player ready status
+    socket.on('player_ready', (ready) => {
+        try {
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const result = lobbyService_1.LobbyService.setPlayerReady(player.id, ready);
+            if (result.success) {
+                const room = roomService_1.RoomService.getPlayerRoom(player.id);
+                if (room) {
+                    // Broadcast ready status change
+                    io.to(room.id).emit('player_ready_changed', player.id, ready);
+                    // Broadcast ready status system message to all players
+                    if (result.systemMessage) {
+                        io.to(room.id).emit('lobby_message', result.systemMessage);
+                    }
+                }
+            }
+        }
+        catch (error) {
+            console.error(`❌ Player ready error:`, error);
+        }
+    });
+    // Update room settings (host only)
+    socket.on('update_room_settings', (settings) => {
+        try {
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const success = lobbyService_1.LobbyService.updateRoomSettings(player.id, settings);
+            if (success) {
+                const room = roomService_1.RoomService.getPlayerRoom(player.id);
+                if (room) {
+                    // Broadcast settings update
+                    io.to(room.id).emit('room_settings_updated', room.gameState.settings);
+                }
+            }
+            else {
+                socket.emit('error', {
+                    code: 'UPDATE_FAILED',
+                    message: 'Failed to update room settings - you may not be the host',
+                    timestamp: Date.now()
+                });
+            }
+        }
+        catch (error) {
+            console.error(`❌ Update settings error:`, error);
+            socket.emit('error', {
+                code: 'UPDATE_FAILED',
+                message: 'Failed to update room settings',
+                timestamp: Date.now()
+            });
+        }
+    });
+    // Start game (host only for private rooms)
+    socket.on('start_game', () => {
+        try {
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const room = roomService_1.RoomService.getPlayerRoom(player.id);
+            if (!room) {
+                socket.emit('error', {
+                    code: 'NO_ROOM',
+                    message: 'You are not in a room',
+                    timestamp: Date.now()
+                });
+                return;
+            }
+            const canStart = lobbyService_1.LobbyService.canStartGame(room.id, player.id);
+            if (!canStart.canStart) {
+                socket.emit('error', {
+                    code: 'CANNOT_START',
+                    message: canStart.reason || 'Cannot start game',
+                    timestamp: Date.now()
+                });
+                return;
+            }
+            console.log(`🎮 Starting game in room ${room.id}`);
+            // Update game status
+            room.gameState.status = 'starting';
+            room.gameState.startedAt = new Date();
+            // Broadcast game starting
+            io.to(room.id).emit('game_starting', room.gameState);
+            // TODO: Phase 3 will implement actual game logic
+            // For now, just notify that game would start
+            setTimeout(() => {
+                io.to(room.id).emit('game_started', room.gameState);
+                console.log(`✅ Game started in room ${room.id}`);
+            }, 3000); // 3 second countdown
+        }
+        catch (error) {
+            console.error(`❌ Start game error:`, error);
+            socket.emit('error', {
+                code: 'START_FAILED',
+                message: 'Failed to start game',
+                timestamp: Date.now()
+            });
+        }
     });
     // Mobile-specific event handlers
     socket.on('mobile_event', (event) => {
@@ -152,7 +393,28 @@ io.on('connection', (socket) => {
     // Disconnection handling
     socket.on('disconnect', (reason) => {
         console.log(`📱 Mobile client disconnected: ${socket.id} (${socket.userProfile?.display_name}) - Reason: ${reason}`);
-        // TODO: Handle player leaving rooms in Phase 2
+        try {
+            // Handle player leaving room
+            const player = (0, auth_1.createPlayerFromSocket)(socket);
+            const room = roomService_1.RoomService.getPlayerRoom(player.id);
+            if (room) {
+                console.log(`🚪 ${player.displayName} disconnected from room ${room.id}`);
+                // Handle lobby leave and broadcast system message
+                const leaveMessage = lobbyService_1.LobbyService.handlePlayerLeave(room.id, player.id);
+                // Remove from room service
+                roomService_1.RoomService.leaveRoom(player.id);
+                // Notify other players
+                socket.to(room.id).emit('player_left', player.id, 'disconnected');
+                // Broadcast leave system message to remaining players
+                if (leaveMessage) {
+                    socket.to(room.id).emit('lobby_message', leaveMessage);
+                }
+                console.log(`✅ ${player.displayName} removed from room ${room.id} due to disconnect`);
+            }
+        }
+        catch (error) {
+            console.error(`❌ Error handling disconnect:`, error);
+        }
         // Log disconnection for analytics
         const connectionDuration = socket.connectionStartTime ?
             Date.now() - socket.connectionStartTime.getTime() : 0;
@@ -186,6 +448,26 @@ server.listen(PORT, () => {
     console.log(`   • Max reconnection attempts: ${process.env.MAX_RECONNECTION_ATTEMPTS || '10'}`);
     console.log(`   • Compression enabled: true`);
     console.log(`   • Connection state recovery: 2 minutes`);
+    // Phase 2 features
+    console.log('🎮 Phase 2 Features Enabled:');
+    console.log(`   • Public game matchmaking`);
+    console.log(`   • Private room creation`);
+    console.log(`   • Lobby chat system`);
+    console.log(`   • Room settings management`);
+    console.log(`   • Player ready status`);
+    // Start periodic cleanup
+    setInterval(() => {
+        try {
+            const roomStats = roomService_1.RoomService.getStats();
+            const lobbyStats = lobbyService_1.LobbyService.getStats();
+            console.log(`📊 Server Stats: ${roomStats.totalRooms} rooms, ${roomStats.totalPlayers} players, ${lobbyStats.totalMessages} lobby messages`);
+            // Cleanup inactive rooms and lobbies every 5 minutes
+            // This will be called every 5 minutes but only cleanup if needed
+        }
+        catch (error) {
+            console.error('❌ Error in periodic cleanup:', error);
+        }
+    }, 5 * 60 * 1000); // Every 5 minutes
 });
 // Graceful shutdown
 process.on('SIGTERM', () => {

@@ -193,25 +193,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
           </View>
         </View>
 
-        {/* Player avatar - only show for current user with custom avatar */}
-        {item.isCurrentUser ? (
-          <UserAvatar
-            avatarData={profile?.avatar}
-            size={28}
-            backgroundColor={item.avatarColor || theme.primary}
-          />
-        ) : (
-          <View
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              backgroundColor: item.avatarColor || theme.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          />
-        )}
+        {/* Player avatar - show for all players */}
+        <UserAvatar
+          avatarData={item.isCurrentUser ? profile?.avatar : item.avatarData}
+          size={28}
+          backgroundColor={item.avatarColor || theme.primary}
+        />
       </View>
     );
   };

@@ -18,7 +18,7 @@ export interface Player {
     connectionQuality: ConnectionQuality;
 }
 export interface PlayerAvatar {
-    type: 'gif' | 'icon';
+    type: 'gif' | 'icon' | 'custom';
     data: string;
     backgroundColor?: string;
 }

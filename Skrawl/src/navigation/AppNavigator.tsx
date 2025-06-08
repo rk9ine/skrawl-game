@@ -70,7 +70,13 @@ const MainNavigator = () => {
   return (
     <MainStack.Navigator screenOptions={{ headerShown: false }}>
       <MainStack.Screen name="Dashboard" component={DashboardScreen} />
-      <MainStack.Screen name="DrawingBattle" component={DrawingBattleScreen} />
+      <MainStack.Screen
+        name="DrawingBattle"
+        component={DrawingBattleScreen}
+        options={{
+          gestureEnabled: false // Disable swipe-to-go-back for game screen
+        }}
+      />
       <MainStack.Screen name="Whiteboard" component={WhiteboardScreen} />
       <MainStack.Screen name="PrivateMatch" component={PrivateMatchScreen} />
       <MainStack.Screen name="Settings" component={SettingsScreen} />

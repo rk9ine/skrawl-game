@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList, RootStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
-// Game store removed - will be reimplemented with new backend
+import { useGameStore } from '../../store/gameStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { applyThemeShadow } from '../../utils/styleUtils';
 import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
@@ -59,8 +59,7 @@ const GameModeSelectionScreen = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation<GameModeSelectionScreenNavigationProp>();
   const { profile, user } = useAuthStore();
-  // Game functionality removed - will be reimplemented with new backend
-  const isLoading = false;
+  const [isLoading, setIsLoading] = useState(false);
 
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -108,13 +107,58 @@ const GameModeSelectionScreen = () => {
   };
 
   const handleQuickPlay = async () => {
-    // Navigate to Drawing Battle screen for UI testing (backend will be implemented later)
-    navigation.navigate('DrawingBattle');
+    try {
+      setIsLoading(true);
+
+      const gameStore = useGameStore.getState();
+
+      // Clear any existing game state before joining new game (industry standard: clean slate)
+      console.log('🧹 Clearing existing game state before Quick Play...');
+      gameStore.clearGameState();
+      gameStore.clearChatMessages(); // Ensure clean chat for new session
+
+      // Connect to WebSocket if not connected
+      if (!gameStore.isConnected) {
+        const connected = await gameStore.connect();
+        if (!connected) {
+          Alert.alert('Connection Error', 'Failed to connect to game server');
+          return;
+        }
+      }
+
+      // Join public game via WebSocket
+      gameStore.joinPublicGame();
+
+      // Navigate to Drawing Battle screen (WebSocket events will handle room joining)
+      navigation.navigate('DrawingBattle');
+
+    } catch (error) {
+      console.error('Quick Play error:', error);
+      Alert.alert('Error', 'Failed to join public game');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCustomGame = () => {
-    // Navigate to Drawing Battle with Private Mode for UI testing (backend will be implemented later)
-    navigation.navigate('DrawingBattle', { privateMode: true });
+  const handleCustomGame = async () => {
+    try {
+      // Connect to WebSocket if not connected
+      const gameStore = useGameStore.getState();
+      if (!gameStore.isConnected) {
+        const connected = await gameStore.connect();
+        if (!connected) {
+          Alert.alert('Connection Error', 'Failed to connect to game server');
+          return;
+        }
+      }
+
+      // Navigate to Drawing Battle with Private Mode (will create room there)
+      navigation.navigate('DrawingBattle', { privateMode: true });
+
+    } catch (error) {
+      console.error('Custom Game error:', error);
+      Alert.alert('Error', 'Failed to start custom game');
+    }
   };
 
   const handleLeaderboard = () => {

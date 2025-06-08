@@ -20,7 +20,7 @@ export interface Player {
 }
 
 export interface PlayerAvatar {
-  type: 'gif' | 'icon';
+  type: 'gif' | 'icon' | 'custom';
   data: string;                  // GIF filename or icon name
   backgroundColor?: string;      // Background color for icons
 }

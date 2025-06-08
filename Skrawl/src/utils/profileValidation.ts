@@ -13,10 +13,24 @@ export class ProfileValidation {
   static readonly USERNAME_MAX_LENGTH = 20;
   static readonly USERNAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
   
-  // Common profanity words (basic list - should be expanded)
+  // Comprehensive profanity and inappropriate words list
   static readonly PROFANITY_WORDS = [
+    // Reserved system words
     'admin', 'moderator', 'support', 'official', 'skrawl',
-    // Add more as needed
+    // Basic profanity
+    'damn', 'hell', 'shit', 'fuck', 'bitch', 'ass', 'crap',
+    // Strong profanity
+    'bastard', 'whore', 'slut', 'piss', 'cock', 'dick', 'pussy',
+    // Racial slurs (comprehensive list)
+    'nigga', 'nigger', 'chink', 'gook', 'spic', 'wetback', 'beaner',
+    'kike', 'hymie', 'raghead', 'towelhead', 'camel', 'jockey',
+    'cracker', 'honky', 'whitey', 'redneck',
+    // Homophobic slurs
+    'fag', 'faggot', 'dyke', 'queer',
+    // Other offensive terms
+    'retard', 'retarded', 'nazi', 'hitler',
+    // Common variations and misspellings
+    'fuk', 'fck', 'sht', 'btch', 'dmn'
   ];
 
   /**

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useEffect, useState, useRef, forwardRef, useImperativeHandle } from 'react';
+import { View, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { ChatInputPosition, useLayoutStore } from '../../store/layoutStore';
@@ -49,10 +49,15 @@ interface MessageInputProps {
   onMessageClear?: () => void;
 }
 
+export interface MessageInputRef {
+  focus: () => void;
+  blur: () => void;
+}
+
 /**
  * Component for displaying current message and send button (skribbl.io style)
  */
-const MessageInput: React.FC<MessageInputProps> = ({
+const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
   position,
   message,
   isRateLimited = false,
@@ -61,31 +66,41 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onShowKeyboard,
   onMessageChange,
   onMessageClear,
-}) => {
+}, ref) => {
   const { theme, spacing, borderRadius, typography } = useTheme();
   const { useSystemKeyboard } = useLayoutStore();
+  const textInputRef = useRef<TextInput>(null);
 
   // Real-time chat state
   const [realTimeRateLimited, setRealTimeRateLimited] = useState(false);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>();
 
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      if (useSystemKeyboard && textInputRef.current) {
+        textInputRef.current.focus();
+      } else {
+        onShowKeyboard?.();
+      }
+    },
+    blur: () => {
+      if (useSystemKeyboard && textInputRef.current) {
+        textInputRef.current.blur();
+      }
+    },
+  }), [useSystemKeyboard, onShowKeyboard]);
+
   // Set up real-time rate limit listeners
   useEffect(() => {
     if (!useRealTimeChat) return;
 
-    const unsubscribeRateLimit = chatService.onRateLimitChange((isLimited, remainingTime) => {
-      setRealTimeRateLimited(isLimited);
-      setRateLimitRemaining(remainingTime);
-    });
+    // TODO: Implement real-time rate limiting with WebSocket service
+    // For now, use the passed isRateLimited prop
+    setRealTimeRateLimited(false);
+    setRateLimitRemaining(undefined);
 
-    // Check initial rate limit status
-    const { isLimited, remainingTime } = chatService.getRateLimitStatus();
-    setRealTimeRateLimited(isLimited);
-    setRateLimitRemaining(remainingTime);
-
-    return () => {
-      unsubscribeRateLimit();
-    };
+    // No cleanup needed since we're not setting up any listeners yet
   }, [useRealTimeChat]);
 
   // Determine effective rate limit status
@@ -142,15 +157,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (!trimmedMessage) return;
 
     if (useRealTimeChat) {
-      // Send via real-time chat service
-      const success = await chatService.sendMessage(trimmedMessage, true);
-      if (success) {
-        // Clear message on successful send
-        onMessageClear?.();
-      }
+      // TODO: Send via WebSocket service when Phase 2 chat is implemented
+      console.log('💬 Real-time chat message:', trimmedMessage);
+      // For now, use legacy callback
+      onSendMessage?.(trimmedMessage);
+      onMessageClear?.();
     } else {
       // Use legacy callback
       onSendMessage?.(trimmedMessage);
+    }
+
+    // Dismiss keyboard after sending message
+    if (useSystemKeyboard && textInputRef.current) {
+      textInputRef.current.blur();
     }
   };
 
@@ -183,6 +202,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {useSystemKeyboard ? (
           // System keyboard mode - show TextInput
           <TextInput
+            ref={textInputRef}
             style={[styles.messageDisplay, {
               color: theme.text,
               fontSize: typography.fontSizes.sm,
@@ -261,6 +281,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       </View>
     </View>
   );
-};
+});
+
+MessageInput.displayName = 'MessageInput';
 
 export default MessageInput;

@@ -5,14 +5,20 @@ import {
   Dimensions,
   Platform,
   ScaledSize,
+  AppState,
+  BackHandler,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Text } from '../../components/ui';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { MainStackParamList } from '../../types/navigation';
 import { useTheme } from '../../theme/ThemeContext';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useAuthStore } from '../../store/authStore';
+import { useGameStore } from '../../store/gameStore';
 // Game services removed - will be reimplemented with new backend
 import {
   DrawingCanvas,
@@ -26,6 +32,7 @@ import {
   ReactionOverlay,
   PrivateModeOverlay,
 } from '../../components/drawing-battle';
+import type { MessageInputRef } from '../../components/drawing-battle/MessageInput';
 import WordSelectionModal from '../../components/drawing-battle/WordSelectionModal';
 
 type DrawingBattleScreenRouteProp = RouteProp<MainStackParamList, 'DrawingBattle'>;
@@ -36,9 +43,19 @@ const DrawingBattleScreen = () => {
   const route = useRoute<DrawingBattleScreenRouteProp>();
   const { chatInputPosition, useSystemKeyboard } = useLayoutStore();
   const { user, profile } = useAuthStore();
-  // Game store functionality removed - will be reimplemented with new backend
-  const currentGame = null;
-  const isConnectedToRealtime = false;
+  const {
+    isConnected,
+    isInRoom,
+    currentRoom,
+    gameState,
+    players,
+    leaveRoom,
+    clearGameState,
+    sendChatMessage
+  } = useGameStore();
+
+  const currentGame = gameState;
+  const isConnectedToRealtime = isConnected;
   const currentUserId = user?.id || null;
   const isCurrentUserDrawer = false;
 
@@ -110,6 +127,13 @@ const DrawingBattleScreen = () => {
     bottomContainer: {
       height: spacing.xl * 1.875, // Using theme spacing.xl (32) * 1.875 instead of hardcoded 60
     },
+    // Keyboard-aware bottom section styles
+    keyboardAvoidingContainer: {
+      flex: 0, // Don't take up flex space, only use what's needed
+    },
+    bottomSection: {
+      // Dynamic height will be calculated based on keyboard state
+    },
   });
 
   // Fixed player list position (always on the left)
@@ -134,10 +158,13 @@ const DrawingBattleScreen = () => {
   const [currentColor, setCurrentColor] = useState('#000000'); // Black - skribbl.io default
   const [currentSize, setCurrentSize] = useState(5); // 5px - skribbl.io default
   const canvasRef = useRef<{ undo: () => void; clear: () => void }>(null);
+  const messageInputRef = useRef<MessageInputRef>(null);
 
   // Virtual keyboard state
   const [currentMessage, setCurrentMessage] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isSystemKeyboardVisible, setIsSystemKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Rate limiting state
   const [lastMessageTime, setLastMessageTime] = useState(0);
@@ -154,53 +181,65 @@ const DrawingBattleScreen = () => {
 
   // Generate real player data from game state
   const getCustomPlayerData = useCallback(() => {
-    // Return placeholder data for UI testing (real game data will be implemented with new backend)
-    const placeholderPlayers = [
-      {
-        id: 'current-user',
-        name: profile?.displayName || 'You',
-        score: 150,
-        isDrawing: true,
-        isReady: true,
-        avatarIcon: 'person',
-        avatarColor: '#4361EE',
-        isCurrentUser: true,
-        avatarData: profile?.avatar
-      },
-      {
-        id: 'player-2',
-        name: 'ArtMaster',
-        score: 120,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'brush',
-        avatarColor: '#FF5733',
-        isCurrentUser: false
-      },
-      {
-        id: 'player-3',
-        name: 'SketchKing',
-        score: 95,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'star',
-        avatarColor: '#33FF57',
-        isCurrentUser: false
-      },
-      {
-        id: 'player-4',
-        name: 'DrawingQueen',
-        score: 80,
-        isDrawing: false,
-        isReady: true,
-        avatarIcon: 'heart',
-        avatarColor: '#FF33E6',
-        isCurrentUser: false
-      }
-    ];
+    // Use real player data from game store
+    if (!players || players.length === 0) {
+      return []; // Return empty array if no players yet
+    }
 
-    return placeholderPlayers;
-  }, [user, profile]);
+    // Transform game store players to PlayerList format
+    const transformedPlayers = players.map((player, index) => {
+      // Extract avatar data properly - handle both current user and other players
+      let avatarData = undefined;
+
+      if (user?.id === player.id) {
+        // For current user, use profile avatar (string format)
+        avatarData = profile?.avatar;
+      } else {
+        // For other players, use server avatar data (object format)
+        avatarData = player.avatar?.data;
+      }
+
+      return {
+        id: player.id,
+        name: player.displayName,
+        score: player.score,
+        isDrawing: player.isDrawing,
+        isReady: player.isReady,
+        avatarIcon: 'person', // Default icon
+        avatarColor: getPlayerColor(index), // Assign colors based on index
+        isCurrentUser: user?.id === player.id, // Check if this is the current user
+        avatarData: avatarData // Use properly extracted avatar data
+      };
+    });
+
+    return transformedPlayers;
+  }, [players, user, profile]);
+
+  // Helper function to assign consistent colors to players
+  const getPlayerColor = (index: number) => {
+    const colors = ['#4361EE', '#FF5733', '#33FF57', '#FF33E6', '#FFD700', '#795548'];
+    return colors[index % colors.length];
+  };
+
+  // Calculate dynamic height for bottom section based on keyboard state
+  const getBottomSectionHeight = () => {
+    const screenHeight = Dimensions.get('window').height;
+    const baseHeight = isLandscape
+      ? Math.min(screenHeight * 0.35, 180)
+      : Math.min(screenHeight * 0.25, 250);
+
+    // When system keyboard is visible, compress the bottom section
+    if (useSystemKeyboard && isSystemKeyboardVisible) {
+      // Calculate available space above keyboard
+      const availableHeight = screenHeight - keyboardHeight;
+      // Reserve space for TopBar (~60px) and some canvas space (at least 200px)
+      const reservedHeight = 260;
+      const maxBottomHeight = Math.max(availableHeight - reservedHeight, 120);
+      return Math.min(baseHeight, maxBottomHeight);
+    }
+
+    return baseHeight;
+  };
 
 
 
@@ -226,15 +265,55 @@ const DrawingBattleScreen = () => {
     return () => subscription.remove();
   }, [handleDimensionsChange]);
 
+  // Listen for system keyboard events
+  useEffect(() => {
+    // Always listen for keyboard events, but only act when system keyboard is enabled
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (event) => {
+      if (useSystemKeyboard) {
+        setIsSystemKeyboardVisible(true);
+        setKeyboardHeight(event.endCoordinates.height);
+      }
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      if (useSystemKeyboard) {
+        setIsSystemKeyboardVisible(false);
+        setKeyboardHeight(0);
+      }
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, [useSystemKeyboard]);
+
+  // Reset keyboard state when switching keyboard types
+  useEffect(() => {
+    if (!useSystemKeyboard) {
+      setIsSystemKeyboardVisible(false);
+      setKeyboardHeight(0);
+    }
+  }, [useSystemKeyboard]);
+
   // Get layout for player list and chat section - consistent across platforms
   const getPlayerListChatLayout = () => {
     // Get custom player data with current user's profile
     const customPlayerData = getCustomPlayerData();
 
+    // Calculate dynamic height for keyboard-aware layout
+    const dynamicHeight = getBottomSectionHeight();
+    const dynamicLayoutStyle = {
+      flexDirection: 'row' as const,
+      height: dynamicHeight,
+      maxHeight: dynamicHeight,
+      minHeight: Math.min(dynamicHeight, 120), // Ensure minimum usable height
+    };
+
     // Only render if we have real player data
     if (!customPlayerData || customPlayerData.length === 0) {
       return (
-        <View style={styles.landscapeLayout}>
+        <View style={dynamicLayoutStyle}>
           <View style={styles.playerListContainer}>
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ color: theme.textSecondary }}>Loading players...</Text>
@@ -250,44 +329,23 @@ const DrawingBattleScreen = () => {
       );
     }
 
-    // Use different layouts based on orientation
-    if (isLandscape) {
-      // In landscape mode, use a vertical layout (side by side)
-      return (
-        <View style={styles.landscapeLayout}>
-          <View style={styles.playerListContainer}>
-            <PlayerList
-              position={playerListPosition}
-              players={customPlayerData}
-            />
-          </View>
-          <View style={styles.chatSectionContainer}>
-            <ChatSection
-              position={playerListPosition === 'left' ? 'right' : 'left'}
-              useRealTimeChat={isConnectedToRealtime}
-            />
-          </View>
+    // Use dynamic layout for both orientations when keyboard is active
+    return (
+      <View style={dynamicLayoutStyle}>
+        <View style={styles.playerListContainer}>
+          <PlayerList
+            position={playerListPosition}
+            players={customPlayerData}
+          />
         </View>
-      );
-    } else {
-      // In portrait mode, use a vertical layout with increased height
-      return (
-        <View style={styles.portraitLayout}>
-          <View style={styles.playerListContainer}>
-            <PlayerList
-              position={playerListPosition}
-              players={customPlayerData}
-            />
-          </View>
-          <View style={styles.chatSectionContainer}>
-            <ChatSection
-              position={playerListPosition === 'left' ? 'right' : 'left'}
-              useRealTimeChat={isConnectedToRealtime}
-            />
-          </View>
+        <View style={styles.chatSectionContainer}>
+          <ChatSection
+            position={playerListPosition === 'left' ? 'right' : 'left'}
+            useRealTimeChat={isConnectedToRealtime}
+          />
         </View>
-      );
-    }
+      </View>
+    );
   };
 
 
@@ -387,11 +445,9 @@ const DrawingBattleScreen = () => {
       setMessageCount(prev => prev + 1);
     }
 
-    // Send the message to real-time service
+    // Send the message to WebSocket server
     console.log('Sending message:', messageToSend);
-
-    // Chat service functionality removed - will be reimplemented with new backend
-    console.log('💬 Message would be sent:', messageToSend, '(chat service will be implemented with new backend)');
+    sendChatMessage(messageToSend);
 
     setCurrentMessage('');
     setIsKeyboardVisible(false);
@@ -413,6 +469,21 @@ const DrawingBattleScreen = () => {
   const handleMessageClear = () => {
     setCurrentMessage('');
     setIsKeyboardVisible(false);
+    // Also dismiss system keyboard if it's visible
+    if (useSystemKeyboard && isSystemKeyboardVisible) {
+      Keyboard.dismiss();
+    }
+  };
+
+  // Handle tap outside to dismiss keyboard
+  const handleTapOutside = () => {
+    if (useSystemKeyboard && isSystemKeyboardVisible) {
+      Keyboard.dismiss();
+      // Also blur the TextInput to ensure it loses focus
+      messageInputRef.current?.blur();
+    } else if (!useSystemKeyboard && isKeyboardVisible) {
+      setIsKeyboardVisible(false);
+    }
   };
 
   // Game logic effects
@@ -454,10 +525,75 @@ const DrawingBattleScreen = () => {
     console.log('Round ended - game logic will be implemented with new backend');
   };
 
-  // Handle exit game
+  // Handle exit game (from settings modal)
   const onExit = () => {
+    console.log('🚪 User manually exiting game...');
+    // Immediate cleanup when user manually exits
+    handleGameCleanup();
     navigation.goBack();
   };
+
+  // Game cleanup function
+  const handleGameCleanup = useCallback(() => {
+    console.log('🚪 Cleaning up game session...');
+    // Always cleanup, regardless of isInRoom state to prevent stale state
+    leaveRoom();
+    clearGameState();
+  }, [leaveRoom, clearGameState]);
+
+  // Handle navigation focus/blur for cleanup
+  useFocusEffect(
+    useCallback(() => {
+      // Screen focused - no action needed
+      console.log('🎮 DrawingBattle screen focused');
+
+      return () => {
+        // Screen unfocused (user navigated away) - cleanup game session
+        // Only cleanup if user actually navigated away (not just a quick focus change)
+        console.log('🚪 DrawingBattle screen unfocused - scheduling cleanup...');
+
+        // Delay cleanup to avoid immediate cleanup on focus changes
+        const cleanupTimeout = setTimeout(() => {
+          console.log('🧹 Executing delayed game cleanup...');
+          handleGameCleanup();
+        }, 1000); // 1 second delay
+
+        // Return cleanup function to cancel timeout if screen refocuses quickly
+        return () => {
+          clearTimeout(cleanupTimeout);
+          console.log('🔄 Cleanup cancelled - screen refocused');
+        };
+      };
+    }, [handleGameCleanup])
+  );
+
+  // Handle Android hardware back button - disable it completely
+  useEffect(() => {
+    const backAction = () => {
+      // Prevent default back action - user must use settings to exit
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, []);
+
+  // Handle app state changes (background/foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        console.log('📱 App went to background - cleaning up game session...');
+        handleGameCleanup();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [handleGameCleanup]);
 
   // Reaction handlers
   const handleLike = () => {
@@ -509,9 +645,8 @@ const DrawingBattleScreen = () => {
         onOpenSettings={() => setIsSettingsModalVisible(true)}
       />
 
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Drawing Canvas - edge-to-edge */}
+      {/* Canvas Section - Unaffected by keyboard */}
+      <TouchableWithoutFeedback onPress={handleTapOutside}>
         <View style={styles.canvasContainer}>
           <DrawingCanvas
             ref={canvasRef}
@@ -533,51 +668,64 @@ const DrawingBattleScreen = () => {
             visible={true}
           />
         </View>
+      </TouchableWithoutFeedback>
 
-        {/* Drawing Toolbar - fully functional */}
-        <DrawingToolbar
-          currentTool={currentTool}
-          currentColor={currentColor}
-          currentSize={currentSize}
-          onToolSelect={handleToolSelect}
-          onColorSelect={handleColorSelect}
-          onSizeSelect={handleSizeSelect}
-          onUndo={handleUndo}
-          onClear={handleClear}
-          onOpenSettings={() => setIsSettingsModalVisible(true)}
-        />
+      {/* Drawing Toolbar - Fixed position */}
+      <DrawingToolbar
+        currentTool={currentTool}
+        currentColor={currentColor}
+        currentSize={currentSize}
+        onToolSelect={handleToolSelect}
+        onColorSelect={handleColorSelect}
+        onSizeSelect={handleSizeSelect}
+        onUndo={handleUndo}
+        onClear={handleClear}
+        onOpenSettings={() => setIsSettingsModalVisible(true)}
+      />
 
-        {/* Message Input - conditionally positioned at top */}
-        {chatInputPosition === 'top' && (
-          <MessageInput
-            position="top"
-            message={currentMessage}
-            isRateLimited={rateLimitCooldown}
-            useRealTimeChat={isConnectedToRealtime}
-            onSendMessage={handleSendMessage}
-            onShowKeyboard={handleShowKeyboard}
-            onMessageChange={handleMessageChange}
-            onMessageClear={handleMessageClear}
-          />
-        )}
+      {/* Bottom Section - Keyboard Aware */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <TouchableWithoutFeedback onPress={handleTapOutside}>
+          <View style={styles.bottomSection}>
+            {/* Message Input - conditionally positioned at top */}
+            {chatInputPosition === 'top' && (
+              <MessageInput
+                ref={messageInputRef}
+                position="top"
+                message={currentMessage}
+                isRateLimited={rateLimitCooldown}
+                useRealTimeChat={isConnectedToRealtime}
+                onSendMessage={handleSendMessage}
+                onShowKeyboard={handleShowKeyboard}
+                onMessageChange={handleMessageChange}
+                onMessageClear={handleMessageClear}
+              />
+            )}
 
-        {/* Player List and Chat Section */}
-        {getPlayerListChatLayout()}
+            {/* Player List and Chat Section */}
+            {getPlayerListChatLayout()}
 
-        {/* Message Input - conditionally positioned at bottom */}
-        {chatInputPosition === 'bottom' && (
-          <MessageInput
-            position="bottom"
-            message={currentMessage}
-            isRateLimited={rateLimitCooldown}
-            useRealTimeChat={isConnectedToRealtime}
-            onSendMessage={handleSendMessage}
-            onShowKeyboard={handleShowKeyboard}
-            onMessageChange={handleMessageChange}
-            onMessageClear={handleMessageClear}
-          />
-        )}
-      </View>
+            {/* Message Input - conditionally positioned at bottom */}
+            {chatInputPosition === 'bottom' && (
+              <MessageInput
+                ref={messageInputRef}
+                position="bottom"
+                message={currentMessage}
+                isRateLimited={rateLimitCooldown}
+                useRealTimeChat={isConnectedToRealtime}
+                onSendMessage={handleSendMessage}
+                onShowKeyboard={handleShowKeyboard}
+                onMessageChange={handleMessageChange}
+                onMessageClear={handleMessageClear}
+              />
+            )}
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
 
       {/* Virtual Keyboard - only show when system keyboard is NOT enabled */}
       {!useSystemKeyboard && (

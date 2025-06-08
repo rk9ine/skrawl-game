@@ -41,6 +41,12 @@ class GameWebSocketService {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private appStateSubscription: any = null;
 
+  // Callbacks for WebSocket events
+  public onLobbyMessage: ((message: any) => void) | null = null;
+  public onPlayerJoined: ((player: any) => void) | null = null;
+  public onPlayerLeft: ((playerId: string) => void) | null = null;
+  public onRoomJoined: ((roomData: any) => void) | null = null;
+
   // Mobile optimization settings
   private optimizationSettings: MobileOptimizationSettings = {
     strokeBatching: false,
@@ -271,6 +277,100 @@ class GameWebSocketService {
     this.socket.on('reconnect_failed', () => {
       console.error('❌ WebSocket reconnection failed');
     });
+
+    // Phase 2: Room Management Events
+    this.setupRoomEventListeners();
+  }
+
+  /**
+   * Set up room management event listeners (Phase 2)
+   */
+  private setupRoomEventListeners(): void {
+    if (!this.socket) return;
+
+    // Room joined successfully - handle initial player list
+    this.socket.on('room_joined', (roomData: any) => {
+      console.log('🏠 Joined room:', roomData.roomId);
+      console.log('👥 Initial players:', roomData.players);
+
+      // Update game store with room data and initial player list
+      if (this.onRoomJoined) {
+        this.onRoomJoined(roomData);
+      }
+    });
+
+    // Private room created
+    this.socket.on('room_created', (roomData: any) => {
+      console.log('🏠 Room created:', roomData.roomId);
+      console.log('🔗 Invite link:', roomData.inviteLink);
+      // TODO: Update game store with room data
+    });
+
+    // Lobby message received
+    this.socket.on('lobby_message', (message: any) => {
+      console.log('💬 Lobby message:', message);
+
+      // Transform server message to game store format
+      const chatMessage = {
+        id: message.id, // Include the unique message ID from server
+        playerId: message.playerId,
+        playerName: message.playerName,
+        message: message.message,
+        timestamp: message.timestamp,
+        type: message.type as 'chat' | 'guess' | 'system',
+        isCorrectGuess: false
+      };
+
+      // Update game store with new message
+      if (this.onLobbyMessage) {
+        this.onLobbyMessage(chatMessage);
+      }
+    });
+
+    // Player joined room (new player joining after initial room join)
+    this.socket.on('player_joined', (player: any) => {
+      console.log('👤 Player joined:', player.displayName);
+      console.log('👤 Player data:', player);
+
+      // Update game store with new player
+      if (this.onPlayerJoined) {
+        this.onPlayerJoined(player);
+      }
+    });
+
+    // Player left room
+    this.socket.on('player_left', (playerId: string, reason: string) => {
+      console.log('👋 Player left:', playerId, 'reason:', reason);
+
+      // Update game store - remove player
+      if (this.onPlayerLeft) {
+        this.onPlayerLeft(playerId);
+      }
+    });
+
+    // Player ready status changed
+    this.socket.on('player_ready_changed', (playerId: string, ready: boolean) => {
+      console.log('✅ Player ready status:', playerId, ready);
+      // TODO: Update game store with ready status
+    });
+
+    // Room settings updated
+    this.socket.on('room_settings_updated', (settings: any) => {
+      console.log('⚙️ Room settings updated:', settings);
+      // TODO: Update game store with new settings
+    });
+
+    // Game starting
+    this.socket.on('game_starting', (gameState: any) => {
+      console.log('🎮 Game starting:', gameState);
+      // TODO: Update game store with starting state
+    });
+
+    // Game started
+    this.socket.on('game_started', (gameState: any) => {
+      console.log('🎮 Game started:', gameState);
+      // TODO: Update game store with active game state
+    });
   }
 
   /**
@@ -315,32 +415,91 @@ class GameWebSocketService {
     return 'poor';
   }
 
-  // Game-specific methods (to be implemented in Phase 2)
-  
+  // Phase 2: Game Room Methods
+
   /**
-   * Join public game (Phase 2)
+   * Join public game
    */
   joinPublicGame(): void {
     if (this.socket?.connected) {
+      console.log('🎮 Requesting to join public game');
       this.socket.emit('join_public_game');
+    } else {
+      console.error('❌ Cannot join public game - not connected');
     }
   }
 
   /**
-   * Create private room (Phase 2)
+   * Create private room
    */
   createPrivateRoom(settings: any): void {
     if (this.socket?.connected) {
+      console.log('🏠 Creating private room with settings:', settings);
       this.socket.emit('create_private_room', settings);
+    } else {
+      console.error('❌ Cannot create private room - not connected');
     }
   }
 
   /**
-   * Join private room (Phase 2)
+   * Join private room by invite code
    */
-  joinPrivateRoom(roomId: string): void {
+  joinPrivateRoom(inviteCode: string): void {
     if (this.socket?.connected) {
-      this.socket.emit('join_private_room', roomId);
+      console.log('🏠 Joining private room with invite code:', inviteCode);
+      this.socket.emit('join_private_room', inviteCode);
+    } else {
+      console.error('❌ Cannot join private room - not connected');
+    }
+  }
+
+  /**
+   * Leave current room
+   */
+  leaveRoom(): void {
+    if (this.socket?.connected) {
+      console.log('🚪 Leaving current room');
+      this.socket.emit('leave_room');
+    }
+  }
+
+  /**
+   * Send lobby chat message
+   */
+  sendLobbyMessage(message: string): void {
+    if (this.socket?.connected) {
+      console.log('💬 Sending lobby message:', message);
+      this.socket.emit('lobby_chat', message);
+    }
+  }
+
+  /**
+   * Set player ready status
+   */
+  setPlayerReady(ready: boolean): void {
+    if (this.socket?.connected) {
+      console.log('✅ Setting ready status:', ready);
+      this.socket.emit('player_ready', ready);
+    }
+  }
+
+  /**
+   * Update room settings (host only)
+   */
+  updateRoomSettings(settings: any): void {
+    if (this.socket?.connected) {
+      console.log('⚙️ Updating room settings:', settings);
+      this.socket.emit('update_room_settings', settings);
+    }
+  }
+
+  /**
+   * Start game (host only)
+   */
+  startGame(): void {
+    if (this.socket?.connected) {
+      console.log('🎮 Starting game');
+      this.socket.emit('start_game');
     }
   }
 }
