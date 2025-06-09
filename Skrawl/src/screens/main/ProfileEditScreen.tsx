@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../../types/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { useTheme } from '../../theme/ThemeContext';
-import { applyThemeShadow } from '../../utils/styleUtils';
+import { applyThemeShadow, getSettingsCardStyle, getResponsiveSpacing, getScreenInfo } from '../../utils/styleUtils';
 import { Text, SafeAreaContainer, CustomIcon } from '../../components/ui';
 import { ProfileService } from '../../services/profileService';
 import { UsernameValidationResult } from '../../types/profile';
@@ -26,6 +26,9 @@ const ProfileEditScreen = () => {
   const { theme, typography, spacing, borderRadius } = useTheme();
   const navigation = useNavigation<ProfileEditScreenNavigationProp>();
   const { user, profile, updateProfile } = useAuthStore();
+
+  // Get screen info for responsive design
+  const screenInfo = getScreenInfo();
 
   // State
   const [newUsername, setNewUsername] = useState(profile?.displayName || '');
@@ -299,7 +302,10 @@ const ProfileEditScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
+        <View style={[styles.header, {
+          paddingHorizontal: getResponsiveSpacing(spacing.lg),
+          paddingVertical: getResponsiveSpacing(spacing.md)
+        }]}>
           <TouchableOpacity
             style={[
               styles.backButton,
@@ -314,7 +320,7 @@ const ProfileEditScreen = () => {
             <CustomIcon name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
 
-          <Text variant="heading" size={typography.fontSizes.xl}>
+          <Text variant="heading" size={screenInfo.isSmallScreen ? typography.fontSizes.lg : typography.fontSizes.xl}>
             Edit Profile
           </Text>
 
@@ -322,7 +328,7 @@ const ProfileEditScreen = () => {
         </View>
 
         {/* Content */}
-        <ScrollView style={styles.content} contentContainerStyle={{ padding: spacing.lg }}>
+        <ScrollView style={styles.content} contentContainerStyle={{ padding: getResponsiveSpacing(spacing.lg) }}>
           {renderUsernameSection()}
           {renderAvatarSection()}
         </ScrollView>

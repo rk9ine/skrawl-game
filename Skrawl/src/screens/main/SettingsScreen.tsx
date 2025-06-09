@@ -199,6 +199,8 @@ const SettingsScreen = () => {
             {
               backgroundColor: theme.surface,
               borderRadius: borderRadius.lg,
+              borderWidth: 1,
+              borderColor: theme.border,
               ...applyThemeShadow('md')
             }
           ]}>
@@ -389,6 +391,8 @@ const SettingsScreen = () => {
             {
               backgroundColor: theme.surface,
               borderRadius: borderRadius.lg,
+              borderWidth: 1,
+              borderColor: theme.border,
               ...applyThemeShadow('md')
             }
           ]}>
@@ -471,10 +475,10 @@ const SettingsScreen = () => {
               styles.card,
               {
                 backgroundColor: theme.surface,
-                borderColor: theme.border,
-                borderRadius: borderRadius.xl,
+                borderRadius: borderRadius.lg,
                 borderWidth: 1,
-                ...applyThemeShadow('sm')
+                borderColor: theme.border,
+                ...applyThemeShadow('md')
               }
             ]}>
               <TouchableOpacity
@@ -531,6 +535,8 @@ const SettingsScreen = () => {
             {
               backgroundColor: theme.surface,
               borderRadius: borderRadius.lg,
+              borderWidth: 1,
+              borderColor: theme.border,
               ...applyThemeShadow('md')
             }
           ]}>
