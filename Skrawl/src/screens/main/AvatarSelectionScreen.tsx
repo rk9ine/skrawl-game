@@ -270,7 +270,7 @@ const AvatarSelectionScreen = () => {
   const handleNavigateToDrawingBattle = async () => {
     // Save avatar first, then navigate
     await handleSaveAvatar();
-    navigation.navigate('DrawingBattle');
+    navigation.navigate('DrawingBattle', {});
   };
 
   const handleNavigateToPrivateMatch = async () => {

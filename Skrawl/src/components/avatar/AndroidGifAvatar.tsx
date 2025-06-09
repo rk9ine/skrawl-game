@@ -51,9 +51,6 @@ const AndroidGifAvatar: React.FC<AndroidGifAvatarProps> = ({
         onError={handleError}
         resizeMode="cover"
         fadeDuration={0}
-        // Android-specific optimizations for GIF performance
-        renderToHardwareTextureAndroid={true}
-        progressiveRenderingEnabled={true}
       />
     </View>
   );

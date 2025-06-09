@@ -99,7 +99,7 @@ const DashboardScreen = () => {
       icon: 'people',
       iconColor: '#FFFFFF',
       iconBgColor: theme.primary,
-      navigateTo: 'GameModeSelection',
+      navigateTo: 'DrawingBattle',
       requiresAuth: true,
     },
     {
@@ -136,9 +136,21 @@ const DashboardScreen = () => {
   const handleCardPress = (card: FeatureCard) => {
     animateCardPress(card.id, () => {
       if (card.requiresAuth && isSkipped) {
-        navigation.navigate('AuthPrompt', { redirectTo: card.navigateTo });
+        navigation.navigate('AuthPrompt', { redirectTo: card.navigateTo as keyof MainStackParamList });
       } else {
-        navigation.navigate(card.navigateTo as any);
+        // Handle navigation with proper parameters
+        if (card.navigateTo === 'DrawingBattle') {
+          navigation.navigate('GameModeSelection');
+        } else if (card.navigateTo === 'Whiteboard') {
+          navigation.navigate('Whiteboard');
+        } else if (card.navigateTo === 'Settings') {
+          navigation.navigate('Settings');
+        } else if (card.navigateTo === 'Dashboard') {
+          navigation.navigate('Dashboard');
+        } else {
+          // Fallback for any other screens
+          console.warn('Unknown navigation target:', card.navigateTo);
+        }
       }
     });
   };
@@ -256,7 +268,7 @@ const DashboardScreen = () => {
             onPress={handleNavigateToSettings}
           >
             <UserAvatar
-              avatarData={profile?.avatar}
+              avatarData={profile?.avatar || undefined}
               size={48}
               style={{
                 borderRadius: 24,

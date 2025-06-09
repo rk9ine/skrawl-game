@@ -48,11 +48,14 @@ interface GameState {
   roomId?: string;
   currentRound: number;
   totalRounds: number;
+  maxRounds?: number; // For compatibility with DrawingBattleScreen
   status: 'waiting' | 'word_selection' | 'drawing' | 'turn_end' | 'finished';
   currentDrawerId?: string;
   word?: string;
+  currentWord?: string; // For compatibility with DrawingBattleScreen
   wordPattern?: string;
   timeRemaining: number;
+  roundDuration?: number; // For compatibility with DrawingBattleScreen
   scores: { [playerId: string]: number };
 }
 
@@ -110,7 +113,6 @@ interface GameStoreState {
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   addPlayer: (player: Player) => void;
   removePlayer: (playerId: string) => void;
-  leaveRoom: () => void;
   clearGameState: () => void;
   setupWebSocketEventHandlers: () => void;
 }

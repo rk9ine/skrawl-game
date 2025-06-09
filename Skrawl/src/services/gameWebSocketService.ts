@@ -96,8 +96,7 @@ class GameWebSocketService {
         forceNew: true,
         // Mobile-specific optimizations
         upgrade: true,
-        rememberUpgrade: false,
-        compression: true
+        rememberUpgrade: false
       });
 
       this.setupSocketEventListeners();

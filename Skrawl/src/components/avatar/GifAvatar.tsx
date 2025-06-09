@@ -51,12 +51,8 @@ const GifAvatar: React.FC<GifAvatarProps> = ({
     android: {
       // Android specific optimizations for GIF performance
       resizeMode: 'cover' as const,
-      // Force hardware acceleration for better GIF performance
-      renderToHardwareTextureAndroid: true,
       // Ensure GIF animations are not paused
       fadeDuration: 0,
-      // Additional Android GIF fixes
-      progressiveRenderingEnabled: true,
     },
     default: {
       resizeMode: 'cover' as const,

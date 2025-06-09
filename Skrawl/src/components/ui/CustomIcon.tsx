@@ -1,16 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export type IconName =
   // Navigation & UI
   | 'arrow-back' | 'chevron-back' | 'chevron-forward' | 'settings' | 'checkmark' | 'close' | 'create-outline'
   // Dashboard Features
-  | 'people' | 'brush' | 'trophy'
+  | 'people' | 'brush' | 'trophy' | 'person'
   // Reactions
   | 'thumbs-up' | 'thumbs-down'
   // Alerts & Actions
-  | 'warning' | 'trash';
+  | 'warning' | 'trash' | 'refresh' | 'lock-closed';
 
 interface CustomIconProps {
   name: IconName;
@@ -43,6 +43,7 @@ const CustomIcon: React.FC<CustomIconProps> = ({
     'people': 'people',
     'brush': 'brush',
     'trophy': 'trophy',
+    'person': 'person',
 
     // Reactions
     'thumbs-up': 'thumbs-up',
@@ -51,6 +52,8 @@ const CustomIcon: React.FC<CustomIconProps> = ({
     // Alerts & Actions
     'warning': 'warning',
     'trash': 'trash',
+    'refresh': 'refresh',
+    'lock-closed': 'lock-closed',
   };
 
   // Check if this icon should use Ionicons
@@ -79,7 +82,5 @@ const CustomIcon: React.FC<CustomIconProps> = ({
   // No fallback icons - only Ionicons for UI elements
   return null;
 };
-
-const styles = StyleSheet.create({});
 
 export default CustomIcon;

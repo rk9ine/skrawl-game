@@ -203,28 +203,22 @@ class SupabaseAuthService implements AuthService {
     }
   }
 
-  async getCurrentUser(): Promise<User | null> {
+  getCurrentUser(): User | null {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('Error getting current user:', error);
-        return null;
-      }
-      return data.user;
+      // Get user from current session synchronously
+      const session = supabase.auth.getSession();
+      return session ? (session as any).data?.session?.user || null : null;
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
     }
   }
 
-  async getCurrentSession(): Promise<Session | null> {
+  getCurrentSession(): Session | null {
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting current session:', error);
-        return null;
-      }
-      return data.session;
+      // Get session synchronously from auth state
+      const session = supabase.auth.getSession();
+      return session ? (session as any).data?.session || null : null;
     } catch (error) {
       console.error('Error getting current session:', error);
       return null;

@@ -22,7 +22,7 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList
 const SettingsScreen = () => {
   const { theme, typography, spacing, borderRadius, shadows, isDark, setThemeType, themeType } = useTheme();
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { user, profile, signOut, resetUserProfile, deleteAccount, isLoading } = useAuthStore();
+  const { user, profile, signOut, deleteAccount, isLoading } = useAuthStore();
   const insets = useSafeAreaInsets();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
@@ -108,29 +108,12 @@ const SettingsScreen = () => {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', onPress: signOut },
+        { text: 'Sign Out', onPress: () => signOut() },
       ]
     );
   };
 
-  const handleResetProfile = () => {
-    Alert.alert(
-      'Reset Profile',
-      'Are you sure you want to reset your profile? You will need to set up your username and avatar again.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset Profile',
-          onPress: () => {
-            // Reset the profile - this will set hasCompletedProfileSetup to false
-            // which will automatically redirect to the ProfileSetup screen
-            resetUserProfile();
-          },
-          style: 'destructive'
-        },
-      ]
-    );
-  };
+
 
   const handleEditProfile = () => {
     navigation.navigate('ProfileEdit');
@@ -320,7 +303,7 @@ const SettingsScreen = () => {
                     marginTop: spacing.xxs
                   }
                 ]}>
-                  {profile?.usernameChangesRemaining > 0 && !profile?.displayNameLocked
+                  {profile?.usernameChangesRemaining && profile.usernameChangesRemaining > 0 && !profile?.displayNameLocked
                     ? `${profile.usernameChangesRemaining} username change remaining`
                     : profile?.displayNameLocked
                       ? 'Username permanently locked'
@@ -332,33 +315,7 @@ const SettingsScreen = () => {
               <CustomIcon name="chevron-forward" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
 
-            {/* Reset Profile Button */}
-            {user?.hasCompletedProfileSetup && (
-              <TouchableOpacity
-                style={[
-                  styles.signOutButton,
-                  {
-                    borderColor: theme.border,
-                    marginHorizontal: spacing.md,
-                    marginTop: spacing.md,
-                    borderRadius: borderRadius.lg,
-                    backgroundColor: theme.backgroundAlt,
-                  }
-                ]}
-                onPress={handleResetProfile}
-              >
-                <Text style={[
-                  styles.signOutButtonText,
-                  {
-                    fontFamily: typography.fontFamily.primary,
-                    color: theme.textSecondary,
-                    fontSize: typography.fontSizes.md
-                  }
-                ]}>
-                  Reset Profile
-                </Text>
-              </TouchableOpacity>
-            )}
+
 
             {/* Sign Out Button */}
             <TouchableOpacity
@@ -652,7 +609,13 @@ const SettingsScreen = () => {
               <CustomIcon name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
-          <Text style={[typography.body, { color: theme.textSecondary, textAlign: 'center', marginTop: 20 }]}>
+          <Text style={[{
+            fontFamily: typography.fontFamily.primary,
+            fontSize: typography.fontSizes.md,
+            color: theme.textSecondary,
+            textAlign: 'center',
+            marginTop: 20
+          }]}>
             Debug panel removed for production
           </Text>
         </View>

@@ -138,7 +138,7 @@ const LeaderboardScreen: React.FC = () => {
         {/* Player Avatar - only show for current user with custom avatar */}
         {isUser ? (
           <UserAvatar
-            avatarData={profile?.avatar}
+            avatarData={profile?.avatar || undefined}
             size={40}
             style={{ marginRight: spacing.md }}
           />

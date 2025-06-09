@@ -26,6 +26,7 @@ interface PlayerItem {
   isReady: boolean;
   avatarIcon?: string; // Ionicons name for the avatar
   avatarColor?: string; // Background color for the avatar
+  avatarData?: string; // JSON string containing avatar data
   isCurrentUser?: boolean; // Whether this is the current user
 }
 
@@ -195,7 +196,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
         {/* Player avatar - show for all players */}
         <UserAvatar
-          avatarData={item.isCurrentUser ? profile?.avatar : item.avatarData}
+          avatarData={item.isCurrentUser ? (profile?.avatar || undefined) : (item.avatarData || undefined)}
           size={28}
           backgroundColor={item.avatarColor || theme.primary}
         />

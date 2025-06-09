@@ -37,6 +37,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   lastUsedEmail: string | null;
+  isSkipped: boolean;
 
   // Computed properties
   needsProfileSetup: boolean;
@@ -47,9 +48,9 @@ interface AuthState {
   verifyEmailOtp: (email: string, token: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   updateProfile: (updates: { displayName: string; avatar: string }) => Promise<{ error: any }>;
+  updateUserProfile: (updates: { displayName?: string; avatar?: string; avatarData?: string }) => Promise<{ error: any }>;
   signOut: (clearEmail?: boolean) => Promise<void>;
   deleteAccount: () => Promise<{ error: any }>;
-  resetUserProfile: () => Promise<void>;
 
   // Internal methods
   checkProfileStatus: (user: User) => Promise<void>;
@@ -76,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       isInitialized: false,
       lastUsedEmail: null,
+      isSkipped: false,
       needsProfileSetup: false,
       _authListener: undefined,
 
@@ -438,6 +440,59 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      // Update user profile (alternative method for compatibility)
+      updateUserProfile: async (updates: { displayName?: string; avatar?: string; avatarData?: string }) => {
+        set({ isLoading: true });
+
+        const { user } = get();
+        if (!user) {
+          set({ isLoading: false });
+          return { error: new Error('No user found') };
+        }
+
+        try {
+          // Update profile in database
+          const { error } = await supabase
+            .from('users')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              display_name: updates.displayName,
+              avatar_data: updates.avatarData || updates.avatar,
+              has_completed_profile_setup: true,
+              updated_at: new Date().toISOString(),
+            });
+
+          if (error) {
+            set({ isLoading: false });
+            return { error };
+          }
+
+          // Update local profile state
+          const currentProfile = get().profile;
+          set({
+            profile: {
+              id: user.id,
+              email: user.email || '',
+              displayName: updates.displayName || currentProfile?.displayName || null,
+              avatar: updates.avatarData || updates.avatar || currentProfile?.avatar || null,
+              hasCompletedProfileSetup: true,
+              usernameChangesRemaining: currentProfile?.usernameChangesRemaining || 1,
+              usernameChangeHistory: currentProfile?.usernameChangeHistory || [],
+              lastUsernameChange: currentProfile?.lastUsernameChange || null,
+              displayNameLocked: currentProfile?.displayNameLocked || false,
+            },
+            needsProfileSetup: false,
+            isLoading: false
+          });
+
+          return { error: null };
+        } catch (error) {
+          set({ isLoading: false });
+          return { error };
+        }
+      },
+
       // Sign out
       signOut: async (clearEmail = false) => {
         set({ isLoading: true });
@@ -516,47 +571,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Reset user profile (existing function)
-      resetUserProfile: async () => {
-        const { user } = get();
-        if (!user) return;
 
-        try {
-          // Reset profile setup status
-          const { error } = await supabase
-            .from('users')
-            .update({
-              has_completed_profile_setup: false,
-              display_name: null,
-              avatar_data: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', user.id);
-
-          if (error) {
-            console.error('Error resetting profile:', error);
-            return;
-          }
-
-          // Update local state
-          set({
-            profile: {
-              id: user.id,
-              email: user.email || '',
-              displayName: null,
-              avatar: null,
-              hasCompletedProfileSetup: false,
-              usernameChangesRemaining: 1,
-              usernameChangeHistory: [],
-              lastUsernameChange: null,
-              displayNameLocked: false,
-            },
-            needsProfileSetup: true,
-          });
-        } catch (error) {
-          console.error('Error resetting profile:', error);
-        }
-      },
 
     }),
     {

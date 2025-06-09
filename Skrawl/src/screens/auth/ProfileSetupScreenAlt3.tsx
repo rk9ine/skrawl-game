@@ -148,13 +148,12 @@ const ProfileSetupScreenAlt3 = () => {
   };
 
   // Handle complete profile setup
-  const handleCompleteSetup = () => {
+  const handleCompleteSetup = async () => {
     if (validateUsername(username)) {
       // Update user profile with selected username and avatar
-      updateUserProfile({
+      await updateUserProfile({
         displayName: username,
         avatar: selectedAvatar.icon, // Store the icon name
-        hasCompletedProfileSetup: true,
       });
 
       console.log('Profile setup complete:', {

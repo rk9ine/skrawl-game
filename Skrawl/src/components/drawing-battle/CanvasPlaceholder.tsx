@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '../../theme/ThemeContext';
 // Drawing WebSocket service removed - will be reimplemented with new backend
@@ -72,6 +72,15 @@ const HTML_CONTENT = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Drawing Battle Canvas</title>
     <style>
+      * {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
       body {
         margin: 0;
         padding: 0;
@@ -81,6 +90,11 @@ const HTML_CONTENT = `
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         height: 100vh;
         height: 100dvh;
+        /* Android WebView optimizations */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
       }
 
       #canvas {
@@ -95,6 +109,17 @@ const HTML_CONTENT = `
         left: 0;
         z-index: 1;
         background-color: #FFFFFF;
+        /* Enhanced Android touch handling */
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
       }
     </style>
   </head>
@@ -104,11 +129,45 @@ const HTML_CONTENT = `
     <script>
       // ===== CANVAS SETUP =====
       const canvas = document.getElementById('canvas');
+
+      // Enhanced context configuration for Android compatibility
       const ctx = canvas.getContext('2d', {
         alpha: true,
         desynchronized: true,
-        willReadFrequently: false
+        willReadFrequently: false,
+        // Android-specific optimizations
+        powerPreference: 'high-performance'
       });
+
+      // Detect if we're running on Android WebView
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isEmulator = /generic|emulator|simulator/i.test(navigator.userAgent) ||
+                        window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname.includes('10.0.2.2'); // Android emulator IP
+
+      // Android-specific canvas optimizations
+      if (isAndroid) {
+        if (isEmulator) {
+          // Android emulator optimizations - more aggressive for emulator performance
+          touchEventThrottle = 12; // Slightly higher for emulator stability
+          console.log('🤖 Android emulator detected - applying emulator optimizations');
+        } else {
+          // Physical Android device optimizations
+          touchEventThrottle = 8; // ~120fps for smoother Android drawing
+        }
+
+        // Force hardware acceleration hints
+        canvas.style.willChange = 'transform';
+        canvas.style.transform = 'translateZ(0)';
+
+        // Additional emulator-specific optimizations
+        if (isEmulator) {
+          // Reduce canvas update frequency for emulator
+          canvas.style.imageRendering = 'optimizeSpeed';
+          canvas.style.imageRendering = '-webkit-optimize-contrast';
+        }
+      }
 
       // ===== DRAWING STATE (smooth but performant) =====
       let isDrawing = false;
@@ -124,6 +183,11 @@ const HTML_CONTENT = `
       let lastDrawnPoint = null;
       let tempCanvas = null;
       let tempCtx = null;
+
+      // Android touch event optimization
+      let lastTouchTime = 0;
+      let touchEventThrottle = 16; // ~60fps for smooth drawing
+      let pendingTouchEvent = null;
 
       // ===== CANVAS UTILITIES =====
       function resizeCanvas() {
@@ -166,8 +230,22 @@ const HTML_CONTENT = `
 
       function getCanvasPoint(e) {
         const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        let clientX, clientY;
+
+        // Improved touch event handling for Android compatibility
+        if (e.touches && e.touches.length > 0) {
+          // Touch event - use first touch point
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+          // Touch end event - use changed touches
+          clientX = e.changedTouches[0].clientX;
+          clientY = e.changedTouches[0].clientY;
+        } else {
+          // Mouse event
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
 
         return {
           x: clientX - rect.left,
@@ -256,14 +334,24 @@ const HTML_CONTENT = `
           return;
         }
 
+        // Android touch event throttling for smoother drawing
+        const currentTime = Date.now();
+        if (currentTime - lastTouchTime < touchEventThrottle) {
+          // Store the pending event to process later
+          pendingTouchEvent = e;
+          return;
+        }
+        lastTouchTime = currentTime;
+
         const point = getCanvasPoint(e);
 
-        // Skip points that are too close for performance
+        // Android optimization: Reduce minimum distance threshold for smoother drawing
         if (lastDrawnPoint) {
           const distance = Math.sqrt(
             Math.pow(point.x - lastDrawnPoint.x, 2) + Math.pow(point.y - lastDrawnPoint.y, 2)
           );
-          if (distance < 2) return;
+          // Reduced threshold from 2 to 1 for Android compatibility
+          if (distance < 1) return;
         }
 
         points.push(point);
@@ -274,6 +362,16 @@ const HTML_CONTENT = `
         }
 
         lastDrawnPoint = point;
+
+        // Process any pending touch event
+        if (pendingTouchEvent && pendingTouchEvent !== e) {
+          setTimeout(() => {
+            if (pendingTouchEvent) {
+              continueDrawing(pendingTouchEvent);
+              pendingTouchEvent = null;
+            }
+          }, touchEventThrottle);
+        }
       }
 
       function stopDrawing(e) {
@@ -656,15 +754,44 @@ const HTML_CONTENT = `
       }
 
       // ===== EVENT LISTENERS =====
+      // Mouse events for desktop testing
       canvas.addEventListener('mousedown', startDrawing);
       canvas.addEventListener('mousemove', continueDrawing);
       canvas.addEventListener('mouseup', stopDrawing);
       canvas.addEventListener('mouseout', stopDrawing);
 
-      canvas.addEventListener('touchstart', startDrawing, { passive: false });
-      canvas.addEventListener('touchmove', continueDrawing, { passive: false });
-      canvas.addEventListener('touchend', stopDrawing, { passive: false });
-      canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+      // Enhanced touch events for Android compatibility
+      canvas.addEventListener('touchstart', startDrawing, {
+        passive: false,
+        capture: true
+      });
+      canvas.addEventListener('touchmove', continueDrawing, {
+        passive: false,
+        capture: true
+      });
+      canvas.addEventListener('touchend', stopDrawing, {
+        passive: false,
+        capture: true
+      });
+      canvas.addEventListener('touchcancel', stopDrawing, {
+        passive: false,
+        capture: true
+      });
+
+      // Prevent context menu on long press (Android)
+      canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+      });
+
+      // Prevent default touch behaviors that interfere with drawing
+      canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+      }, { passive: false });
 
       window.addEventListener('resize', resizeCanvas);
 
@@ -862,6 +989,29 @@ const DrawingCanvas = React.forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
 
 
+  // Platform-specific WebView props for Android touch optimization
+  const androidProps = Platform.OS === 'android' ? {
+    androidHardwareAccelerationDisabled: false,
+    androidLayerType: "hardware" as const,
+    nestedScrollEnabled: false,
+    overScrollMode: "never" as const,
+    // Additional Android-specific optimizations
+    mixedContentMode: "compatibility" as const,
+    cacheEnabled: false, // Disable cache for real-time drawing
+    // Android emulator optimizations
+    thirdPartyCookiesEnabled: false, // Reduce overhead
+    geolocationEnabled: false, // Reduce overhead
+    saveFormDataDisabled: true, // Reduce overhead
+  } : {};
+
+  const iosProps = Platform.OS === 'ios' ? {
+    allowsInlineMediaPlayback: true,
+    mediaPlaybackRequiresUserAction: false,
+    // iOS-specific optimizations
+    automaticallyAdjustContentInsets: false,
+    contentInsetAdjustmentBehavior: "never" as const,
+  } : {};
+
   return (
     <View style={styles.container}>
       <WebView
@@ -872,6 +1022,15 @@ const DrawingCanvas = React.forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         bounces={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
+        // Cross-platform touch optimizations
+        startInLoadingState={false}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        // Prevent zoom and scroll interference with drawing
+        scalesPageToFit={false}
+        // Platform-specific props
+        {...androidProps}
+        {...iosProps}
         onLoad={handleWebViewLoad}
         onMessage={(event) => {
           try {

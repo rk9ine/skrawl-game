@@ -130,7 +130,7 @@ const GameModeSelectionScreen = () => {
       gameStore.joinPublicGame();
 
       // Navigate to Drawing Battle screen (WebSocket events will handle room joining)
-      navigation.navigate('DrawingBattle');
+      navigation.navigate('DrawingBattle', {});
 
     } catch (error) {
       console.error('Quick Play error:', error);

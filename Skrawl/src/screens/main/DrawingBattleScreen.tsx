@@ -498,13 +498,13 @@ const DrawingBattleScreen = () => {
   const handleWordSelected = async (word: string) => {
     // Game logic service removed - will be reimplemented with new backend
     setIsWordSelectionVisible(false);
-    setCurrentWord(word);
+    // Note: currentWord is read-only from game state, will be set by backend
     console.log(`Word selected: ${word} - game logic will be implemented with new backend`);
   };
 
   // Handle round timer
   useEffect(() => {
-    if (currentGame?.status !== 'in_progress' || timeRemaining <= 0) return;
+    if (currentGame?.status !== 'drawing' || timeRemaining <= 0) return;
 
     const timer = setTimeout(() => {
       setTimeRemaining(prev => {
